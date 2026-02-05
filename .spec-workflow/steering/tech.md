@@ -11,11 +11,9 @@
 - ブラウザでReact製フロントエンドを表示
 - フロントエンドから GitHub API を呼び出し（サーバー経由）
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Browser   │────▶│  Go Server  │────▶│  GitHub API │
-│ (React Flow)│◀────│  (embed)    │◀────│             │
-└─────────────┘     └─────────────┘     └─────────────┘
+```mermaid
+flowchart LR
+    Browser["Browser<br/>(React Flow)"] <--> Server["Go Server<br/>(embed)"] <--> GitHub["GitHub API"]
 ```
 
 ## コア技術
@@ -49,9 +47,6 @@
 ### 外部連携
 
 - **APIs**: GitHub REST API（issue dependencies）
-  - `GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by`
-  - `POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by`
-  - `DELETE /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by`
 - **Protocols**: HTTP/REST
 - **Authentication**: `gh` CLI の認証情報を go-gh 経由で利用
 

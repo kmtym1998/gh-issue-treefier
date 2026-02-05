@@ -3,6 +3,7 @@
 !.spec-workflow/user-templates
 !.spec-workflow/steering
 !.spec-workflow/specs
+audit.log
 
 # Dependencies
 node_modules/
