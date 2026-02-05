@@ -13,7 +13,8 @@ node_modules/
 
 # Editor
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 *.swp
 *.swo
 
@@ -24,3 +25,4 @@ node_modules/
 # Build
 dist/
 build/
+gh-issue-treefier
