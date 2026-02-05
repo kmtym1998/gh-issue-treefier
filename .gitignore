@@ -1,0 +1,25 @@
+# spec-workflow (ignore all except specific dirs)
+.spec-workflow/*
+!.spec-workflow/user-templates
+!.spec-workflow/steering
+!.spec-workflow/specs
+
+# Dependencies
+node_modules/
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Build
+dist/
+build/
