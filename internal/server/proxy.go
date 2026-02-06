@@ -1,82 +1,61 @@
 package server
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
 	"net/http"
+	"net/http/httputil"
 	"strings"
 
-	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/auth"
 )
 
 type proxyHandler struct {
-	restClient *api.RESTClient
+	proxy      *httputil.ReverseProxy
+	pathPrefix string // "" for github.com, "/api/v3" for GHE
 }
 
 func newProxyHandler() (*proxyHandler, error) {
-	client, err := api.DefaultRESTClient()
-	if err != nil {
-		return nil, err
+	host, _ := auth.DefaultHost()
+	token, _ := auth.TokenForHost(host)
+	apiHost, pathPrefix := resolveGitHubAPI(host)
+
+	return newProxyHandlerWith("https", apiHost, pathPrefix, token), nil
+}
+
+// newProxyHandlerWith creates a proxyHandler with explicit configuration.
+// Exported for testing.
+func newProxyHandlerWith(scheme, apiHost, pathPrefix, token string) *proxyHandler {
+	proxy := &httputil.ReverseProxy{
+		Director: func(req *http.Request) {
+			req.URL.Scheme = scheme
+			req.URL.Host = apiHost
+			req.Host = apiHost
+			if token != "" {
+				req.Header.Set("Authorization", "token " + token)
+			}
+		},
 	}
-	return &proxyHandler{restClient: client}, nil
+
+	return &proxyHandler{proxy: proxy, pathPrefix: pathPrefix}
+}
+
+// resolveGitHubAPI returns the API host and path prefix for the given GitHub host.
+// For github.com, the API is at api.github.com with no prefix.
+// For GHE, the API is at the same host with /api/v3 prefix.
+func resolveGitHubAPI(host string) (apiHost string, pathPrefix string) {
+	if host == "" || host == "github.com" {
+		return "api.github.com", ""
+	}
+	return host, "/api/v3"
 }
 
 func (h *proxyHandler) ServeRESTProxy(w http.ResponseWriter, r *http.Request) {
-	// Extract path after /api/github/rest/
 	path := strings.TrimPrefix(r.URL.Path, "/api/github/rest/")
 	if path == "" {
 		http.Error(w, "path required", http.StatusBadRequest)
 		return
 	}
-
-	// Add query string if present
-	if r.URL.RawQuery != "" {
-		path = path + "?" + r.URL.RawQuery
-	}
-
-	var response any
-	var err error
-
-	switch r.Method {
-	case http.MethodGet:
-		err = h.restClient.Get(path, &response)
-	case http.MethodPost:
-		body, readErr := io.ReadAll(r.Body)
-		if readErr != nil {
-			http.Error(w, "failed to read body", http.StatusBadRequest)
-			return
-		}
-		var bodyReader io.Reader
-		if len(body) > 0 {
-			bodyReader = bytes.NewReader(body)
-		}
-		err = h.restClient.Post(path, bodyReader, &response)
-	case http.MethodPatch:
-		body, readErr := io.ReadAll(r.Body)
-		if readErr != nil {
-			http.Error(w, "failed to read body", http.StatusBadRequest)
-			return
-		}
-		var bodyReader io.Reader
-		if len(body) > 0 {
-			bodyReader = bytes.NewReader(body)
-		}
-		err = h.restClient.Patch(path, bodyReader, &response)
-	case http.MethodDelete:
-		err = h.restClient.Delete(path, &response)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if err != nil {
-		handleAPIError(w, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	r.URL.Path = h.pathPrefix + "/" + path
+	h.proxy.ServeHTTP(w, r)
 }
 
 func (h *proxyHandler) ServeGraphQLProxy(w http.ResponseWriter, r *http.Request) {
@@ -84,39 +63,10 @@ func (h *proxyHandler) ServeGraphQLProxy(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "failed to read body", http.StatusBadRequest)
-		return
-	}
-
-	if len(body) == 0 {
+	if r.Body == nil || r.Body == http.NoBody || r.ContentLength == 0 {
 		http.Error(w, "request body required", http.StatusBadRequest)
 		return
 	}
-
-	var response any
-	err = h.restClient.Post("graphql", bytes.NewReader(body), &response)
-	if err != nil {
-		handleAPIError(w, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleAPIError(w http.ResponseWriter, err error) {
-	if httpErr, ok := err.(*api.HTTPError); ok {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(httpErr.StatusCode)
-		json.NewEncoder(w).Encode(map[string]any{
-			"error":   httpErr.Message,
-			"status":  httpErr.StatusCode,
-			"details": httpErr.Errors,
-		})
-		return
-	}
-	http.Error(w, err.Error(), http.StatusInternalServerError)
+	r.URL.Path = h.pathPrefix + "/graphql"
+	h.proxy.ServeHTTP(w, r)
 }

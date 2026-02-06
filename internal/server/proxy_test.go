@@ -7,141 +7,163 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/cli/go-gh/v2/pkg/api"
 )
 
-// newTestProxyHandler creates a proxyHandler whose REST client sends all
-// requests to the given httptest.Server instead of api.github.com.
-func newTestProxyHandler(t *testing.T, server *httptest.Server) *proxyHandler {
-	t.Helper()
-	client, err := api.NewRESTClient(api.ClientOptions{
-		AuthToken: "test-token",
-		Transport: &redirectTransport{target: server},
-	})
-	if err != nil {
-		t.Fatalf("failed to create test client: %v", err)
-	}
-	return &proxyHandler{restClient: client}
-}
-
-// redirectTransport rewrites every outgoing request so that it hits the
-// httptest.Server instead of the real GitHub API.
-type redirectTransport struct {
-	target *httptest.Server
-}
-
-func (rt *redirectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req = req.Clone(req.Context())
-	req.URL.Scheme = "http"
-	req.URL.Host = strings.TrimPrefix(rt.target.URL, "http://")
-	return http.DefaultTransport.RoundTrip(req)
-}
-
-func TestHandleAPIError(t *testing.T) {
+func TestResolveGitHubAPI(t *testing.T) {
 	tests := []struct {
 		name           string
-		err            error
-		wantStatus     int
-		wantContains   string
+		host           string
+		wantAPIHost    string
+		wantPathPrefix string
 	}{
 		{
-			name: "HTTP error 401",
-			err: &api.HTTPError{
-				StatusCode: 401,
-				Message:    "Bad credentials",
-			},
-			wantStatus:   401,
-			wantContains: "Bad credentials",
+			name:           "github.com",
+			host:           "github.com",
+			wantAPIHost:    "api.github.com",
+			wantPathPrefix: "",
 		},
 		{
-			name: "HTTP error 404",
-			err: &api.HTTPError{
-				StatusCode: 404,
-				Message:    "Not Found",
-			},
-			wantStatus:   404,
-			wantContains: "Not Found",
+			name:           "empty host defaults to github.com",
+			host:           "",
+			wantAPIHost:    "api.github.com",
+			wantPathPrefix: "",
 		},
 		{
-			name: "HTTP error 429",
-			err: &api.HTTPError{
-				StatusCode: 429,
-				Message:    "rate limit exceeded",
-			},
-			wantStatus:   429,
-			wantContains: "rate limit",
-		},
-		{
-			name:         "generic error",
-			err:          &genericError{msg: "connection failed"},
-			wantStatus:   500,
-			wantContains: "connection failed",
+			name:           "GHE host",
+			host:           "github.example.com",
+			wantAPIHost:    "github.example.com",
+			wantPathPrefix: "/api/v3",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			handleAPIError(w, tt.err)
-
-			if w.Code != tt.wantStatus {
-				t.Errorf("status = %d, want %d", w.Code, tt.wantStatus)
+			apiHost, pathPrefix := resolveGitHubAPI(tt.host)
+			if apiHost != tt.wantAPIHost {
+				t.Errorf("apiHost = %q, want %q", apiHost, tt.wantAPIHost)
 			}
-
-			body := w.Body.String()
-			if !strings.Contains(body, tt.wantContains) {
-				t.Errorf("body does not contain %q, got: %s", tt.wantContains, body)
+			if pathPrefix != tt.wantPathPrefix {
+				t.Errorf("pathPrefix = %q, want %q", pathPrefix, tt.wantPathPrefix)
 			}
 		})
 	}
 }
 
-type genericError struct {
-	msg string
+// newMockHandler creates a proxyHandler pointing to the given test server.
+func newMockHandler(t *testing.T, mock *httptest.Server, pathPrefix string) *proxyHandler {
+	t.Helper()
+	host := strings.TrimPrefix(mock.URL, "http://")
+	return newProxyHandlerWith("http", host, pathPrefix, "test-token")
 }
 
-func (e *genericError) Error() string {
-	return e.msg
-}
-
-func TestServeRESTProxy_PathExtraction(t *testing.T) {
-	// Test that path is correctly extracted
-	tests := []struct {
-		name       string
-		path       string
-		query      string
-		wantPath   string
-	}{
-		{
-			name:     "simple path",
-			path:     "/api/github/rest/repos/owner/repo",
-			wantPath: "repos/owner/repo",
-		},
-		{
-			name:     "path with query",
-			path:     "/api/github/rest/repos/owner/repo/issues",
-			query:    "state=open&per_page=10",
-			wantPath: "repos/owner/repo/issues?state=open&per_page=10",
-		},
+func TestServeRESTProxy_ForwardsRequest(t *testing.T) {
+	var received struct {
+		path, query, auth, method string
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path := strings.TrimPrefix(tt.path, "/api/github/rest/")
-			if tt.query != "" {
-				path = path + "?" + tt.query
-			}
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received.path = r.URL.Path
+		received.query = r.URL.RawQuery
+		received.auth = r.Header.Get("Authorization")
+		received.method = r.Method
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-RateLimit-Remaining", "42")
+		w.Write([]byte(`{"full_name":"owner/repo"}`))
+	}))
+	defer mock.Close()
 
-			if path != tt.wantPath {
-				t.Errorf("path = %q, want %q", path, tt.wantPath)
-			}
-		})
+	handler := newMockHandler(t, mock, "")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/github/rest/repos/owner/repo?per_page=10", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeRESTProxy(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if received.path != "/repos/owner/repo" {
+		t.Errorf("path = %q, want /repos/owner/repo", received.path)
+	}
+	if received.query != "per_page=10" {
+		t.Errorf("query = %q, want per_page=10", received.query)
+	}
+	if received.auth != "token test-token" {
+		t.Errorf("auth = %q, want 'token test-token'", received.auth)
+	}
+	if received.method != http.MethodGet {
+		t.Errorf("method = %q, want GET", received.method)
+	}
+	// Verify response headers are forwarded transparently
+	if w.Header().Get("X-RateLimit-Remaining") != "42" {
+		t.Errorf("X-RateLimit-Remaining = %q, want '42'", w.Header().Get("X-RateLimit-Remaining"))
+	}
+	if !strings.Contains(w.Body.String(), "owner/repo") {
+		t.Errorf("body = %q, want it to contain 'owner/repo'", w.Body.String())
+	}
+}
+
+func TestServeRESTProxy_POST(t *testing.T) {
+	var receivedBody string
+	var receivedMethod string
+
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedMethod = r.Method
+		b, _ := io.ReadAll(r.Body)
+		receivedBody = string(b)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"id":1}`))
+	}))
+	defer mock.Close()
+
+	handler := newMockHandler(t, mock, "")
+
+	body := `{"title":"new issue"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/github/rest/repos/owner/repo/issues", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.ServeRESTProxy(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201", w.Code)
+	}
+	if receivedMethod != http.MethodPost {
+		t.Errorf("method = %q, want POST", receivedMethod)
+	}
+	if !strings.Contains(receivedBody, "new issue") {
+		t.Errorf("body = %q, want it to contain 'new issue'", receivedBody)
+	}
+}
+
+func TestServeRESTProxy_GHEPathPrefix(t *testing.T) {
+	var receivedPath string
+
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{}`))
+	}))
+	defer mock.Close()
+
+	handler := newMockHandler(t, mock, "/api/v3")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/github/rest/repos/owner/repo", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeRESTProxy(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if receivedPath != "/api/v3/repos/owner/repo" {
+		t.Errorf("path = %q, want /api/v3/repos/owner/repo", receivedPath)
 	}
 }
 
 func TestServeRESTProxy_EmptyPath(t *testing.T) {
-	handler := &proxyHandler{}
+	handler := newProxyHandlerWith("http", "localhost", "", "token")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/github/rest/", nil)
 	w := httptest.NewRecorder()
@@ -149,93 +171,49 @@ func TestServeRESTProxy_EmptyPath(t *testing.T) {
 	handler.ServeRESTProxy(w, req)
 
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+		t.Errorf("status = %d, want 400", w.Code)
 	}
 }
 
-func TestServeRESTProxy_MethodNotAllowed(t *testing.T) {
-	handler := &proxyHandler{}
+func TestServeRESTProxy_ErrorResponse(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"message":"Not Found"}`))
+	}))
+	defer mock.Close()
 
-	req := httptest.NewRequest(http.MethodPut, "/api/github/rest/repos/owner/repo", nil)
+	handler := newMockHandler(t, mock, "")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/github/rest/repos/owner/nonexistent", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeRESTProxy(w, req)
 
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Not Found") {
+		t.Errorf("body = %q, want it to contain 'Not Found'", w.Body.String())
 	}
 }
 
-func TestHandleAPIError_JSONResponse(t *testing.T) {
-	w := httptest.NewRecorder()
-	err := &api.HTTPError{
-		StatusCode: 404,
-		Message:    "Not Found",
-		Errors:     []api.HTTPErrorItem{{Message: "repo not found"}},
+func TestServeGraphQLProxy_ForwardsRequest(t *testing.T) {
+	var received struct {
+		path, auth, body string
 	}
-
-	handleAPIError(w, err)
-
-	var response map[string]any
-	if jsonErr := json.Unmarshal(w.Body.Bytes(), &response); jsonErr != nil {
-		t.Fatalf("failed to parse response: %v", jsonErr)
-	}
-
-	if response["error"] != "Not Found" {
-		t.Errorf("error = %v, want 'Not Found'", response["error"])
-	}
-
-	if response["status"] != float64(404) {
-		t.Errorf("status = %v, want 404", response["status"])
-	}
-}
-
-func TestServeGraphQLProxy_MethodNotAllowed(t *testing.T) {
-	handler := &proxyHandler{}
-
-	req := httptest.NewRequest(http.MethodGet, "/api/github/graphql", nil)
-	w := httptest.NewRecorder()
-
-	handler.ServeGraphQLProxy(w, req)
-
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
-	}
-}
-
-func TestServeGraphQLProxy_EmptyBody(t *testing.T) {
-	handler := &proxyHandler{}
-
-	req := httptest.NewRequest(http.MethodPost, "/api/github/graphql", nil)
-	w := httptest.NewRecorder()
-
-	handler.ServeGraphQLProxy(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-
-	if !strings.Contains(w.Body.String(), "request body required") {
-		t.Errorf("expected 'request body required' in response, got: %s", w.Body.String())
-	}
-}
-
-func TestServeGraphQLProxy_ForwardsRequestBody(t *testing.T) {
-	var receivedBody string
-	var receivedPath string
-	var receivedContentType string
 
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedPath = r.URL.Path
-		receivedContentType = r.Header.Get("Content-Type")
+		received.path = r.URL.Path
+		received.auth = r.Header.Get("Authorization")
 		b, _ := io.ReadAll(r.Body)
-		receivedBody = string(b)
+		received.body = string(b)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"data":{"viewer":{"login":"testuser"}}}`))
 	}))
 	defer mock.Close()
 
-	handler := newTestProxyHandler(t, mock)
+	handler := newMockHandler(t, mock, "")
 
 	body := `{"query":"{ viewer { login } }"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/github/graphql", strings.NewReader(body))
@@ -245,43 +223,42 @@ func TestServeGraphQLProxy_ForwardsRequestBody(t *testing.T) {
 	handler.ServeGraphQLProxy(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if received.path != "/graphql" {
+		t.Errorf("path = %q, want /graphql", received.path)
+	}
+	if received.auth != "token test-token" {
+		t.Errorf("auth = %q, want 'token test-token'", received.auth)
+	}
+	if !strings.Contains(received.body, "viewer") {
+		t.Errorf("body = %q, want it to contain 'viewer'", received.body)
 	}
 
-	// Verify the request was forwarded to the /api/graphql path
-	if !strings.HasSuffix(receivedPath, "/graphql") {
-		t.Errorf("received path = %q, want suffix /graphql", receivedPath)
+	var got map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
 	}
-
-	// Verify the request body was forwarded
-	if !strings.Contains(receivedBody, `viewer`) {
-		t.Errorf("received body = %q, want it to contain 'viewer'", receivedBody)
-	}
-
-	// Verify content-type was set
-	if receivedContentType == "" {
-		t.Error("expected Content-Type header to be set")
+	data := got["data"].(map[string]any)
+	viewer := data["viewer"].(map[string]any)
+	if viewer["login"] != "testuser" {
+		t.Errorf("login = %v, want 'testuser'", viewer["login"])
 	}
 }
 
-func TestServeGraphQLProxy_ReturnsResponse(t *testing.T) {
-	wantData := map[string]any{
-		"data": map[string]any{
-			"repository": map[string]any{
-				"name": "test-repo",
-			},
-		},
-	}
+func TestServeGraphQLProxy_GHEPathPrefix(t *testing.T) {
+	var receivedPath string
 
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(wantData)
+		w.Write([]byte(`{}`))
 	}))
 	defer mock.Close()
 
-	handler := newTestProxyHandler(t, mock)
+	handler := newMockHandler(t, mock, "/api/v3")
 
-	body := `{"query":"{ repository(owner:\"o\", name:\"r\") { name } }"}`
+	body := `{"query":"{ viewer { login } }"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/github/graphql", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -289,33 +266,43 @@ func TestServeGraphQLProxy_ReturnsResponse(t *testing.T) {
 	handler.ServeGraphQLProxy(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+		t.Fatalf("status = %d, want 200", w.Code)
 	}
-
-	ct := w.Header().Get("Content-Type")
-	if ct != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", ct)
-	}
-
-	var got map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-		t.Fatalf("failed to parse response: %v", err)
-	}
-
-	data, ok := got["data"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected 'data' key in response, got: %v", got)
-	}
-	repo, ok := data["repository"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected 'repository' key, got: %v", data)
-	}
-	if repo["name"] != "test-repo" {
-		t.Errorf("name = %v, want 'test-repo'", repo["name"])
+	if receivedPath != "/api/v3/graphql" {
+		t.Errorf("path = %q, want /api/v3/graphql", receivedPath)
 	}
 }
 
-func TestServeGraphQLProxy_APIError(t *testing.T) {
+func TestServeGraphQLProxy_MethodNotAllowed(t *testing.T) {
+	handler := newProxyHandlerWith("http", "localhost", "", "token")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/github/graphql", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeGraphQLProxy(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("status = %d, want 405", w.Code)
+	}
+}
+
+func TestServeGraphQLProxy_EmptyBody(t *testing.T) {
+	handler := newProxyHandlerWith("http", "localhost", "", "token")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/github/graphql", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeGraphQLProxy(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "request body required") {
+		t.Errorf("body = %q, want it to contain 'request body required'", w.Body.String())
+	}
+}
+
+func TestServeGraphQLProxy_ErrorResponse(t *testing.T) {
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -323,7 +310,7 @@ func TestServeGraphQLProxy_APIError(t *testing.T) {
 	}))
 	defer mock.Close()
 
-	handler := newTestProxyHandler(t, mock)
+	handler := newMockHandler(t, mock, "")
 
 	body := `{"query":"{ viewer { login } }"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/github/graphql", strings.NewReader(body))
@@ -333,11 +320,9 @@ func TestServeGraphQLProxy_APIError(t *testing.T) {
 	handler.ServeGraphQLProxy(w, req)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+		t.Errorf("status = %d, want 401", w.Code)
 	}
-
-	respBody := w.Body.String()
-	if !strings.Contains(respBody, "Bad credentials") {
-		t.Errorf("response body = %q, want it to contain 'Bad credentials'", respBody)
+	if !strings.Contains(w.Body.String(), "Bad credentials") {
+		t.Errorf("body = %q, want it to contain 'Bad credentials'", w.Body.String())
 	}
 }
