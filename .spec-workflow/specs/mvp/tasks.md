@@ -4,7 +4,7 @@
 
 ## バックエンド
 
-- [ ] 1. console サブコマンドの実装
+- [x] 1. console サブコマンドの実装
   - File: cmd/gh-issue-treefier/main.go
   - `console` サブコマンドを追加
   - `--port` オプションでポート指定（未指定時は空きポート自動採番）
@@ -13,7 +13,7 @@
   - _Requirements: サーバー起動_
   - _Prompt: Role: Go Developer | Task: console サブコマンドを実装。--port フラグで指定可能、未指定時は net.Listen で空きポートを取得。起動後にブラウザを自動で開く（pkg/browser または os/exec）| Restrictions: 標準ライブラリと go-gh のみ使用 | Success: gh issue-treefier console で起動、--port 3000 で指定ポート使用、自動でブラウザが開く_
 
-- [ ] 2. HTTP サーバーの静的ファイル配信
+- [x] 2. HTTP サーバーの静的ファイル配信
   - File: internal/server/server.go, internal/server/static.go
   - embed で React ビルド成果物を埋め込み
   - `/` へのリクエストで index.html を返す
@@ -23,7 +23,7 @@
   - _Requirements: サーバー起動_
   - _Prompt: Role: Go Developer | Task: go:embed で web/dist を埋め込み、http.FileServer で配信。SPA のため存在しないパスは index.html にフォールバック | Restrictions: 開発時は embed を使わず実ファイルを読む選択肢も検討 | Success: localhost:port/ でReactアプリが表示される_
 
-- [ ] 2.1. 静的ファイル配信のテスト
+- [x] 2.1. 静的ファイル配信のテスト
   - File: internal/server/static_test.go
   - SPA フォールバックの動作確認
   - 存在するファイルと存在しないパスのテスト
@@ -31,7 +31,7 @@
   - _Leverage: net/http/httptest_
   - _Prompt: Role: Go Developer | Task: httptest.NewServer でテストサーバーを起動し、/, /index.html, /assets/xxx.js, /unknown-path へのリクエストをテスト | Success: 各パスで期待するレスポンスが返る_
 
-- [ ] 3. GitHub REST API プロキシ
+- [x] 3. GitHub REST API プロキシ
   - File: internal/server/proxy.go
   - `/api/github/rest/*` を GitHub REST API に転送
   - go-gh で認証情報を取得しリクエストに付与
@@ -41,7 +41,7 @@
   - _Requirements: GitHub API プロキシ_
   - _Prompt: Role: Go Developer | Task: /api/github/rest/ 以降のパスを api.github.com に転送。go-gh の RESTClient を使用して認証ヘッダーを自動付与 | Restrictions: リクエストボディとレスポンスはそのまま転送 | Success: /api/github/rest/repos/owner/repo/issues で issue 一覧が取得できる_
 
-- [ ] 3.1. REST API プロキシのテスト
+- [x] 3.1. REST API プロキシのテスト
   - File: internal/server/proxy_test.go
   - パス変換ロジックのテスト
   - エラーレスポンスのテスト（401, 404, 429）
@@ -49,7 +49,7 @@
   - _Leverage: net/http/httptest_
   - _Prompt: Role: Go Developer | Task: モック GitHub API サーバーを httptest で作成し、プロキシ経由でリクエストが正しく転送されるかテスト。パス変換、ヘッダー付与、エラーハンドリングを検証 | Success: プロキシが正しくリクエストを転送し、エラー時も適切なレスポンスを返す_
 
-- [ ] 4. GitHub GraphQL API プロキシ
+- [x] 4. GitHub GraphQL API プロキシ
   - File: internal/server/proxy.go
   - `/api/github/graphql` を GitHub GraphQL API に転送
   - go-gh で認証情報を取得しリクエストに付与
@@ -58,7 +58,7 @@
   - _Requirements: GitHub API プロキシ_
   - _Prompt: Role: Go Developer | Task: /api/github/graphql へのPOSTリクエストを api.github.com/graphql に転送。go-gh の GraphQLClient または RESTClient を使用 | Restrictions: クエリはフロントエンドから受け取る | Success: GraphQL クエリでプロジェクト情報が取得できる_
 
-- [ ] 4.1. GraphQL API プロキシのテスト
+- [-] 4.1. GraphQL API プロキシのテスト
   - File: internal/server/proxy_test.go
   - GraphQL リクエストの転送テスト
   - リクエストボディが正しく転送されるかのテスト
