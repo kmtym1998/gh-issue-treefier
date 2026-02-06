@@ -9,24 +9,27 @@ type Server struct {
 	port int
 }
 
-func New() *Server {
+func New(port int) *Server {
 	return &Server{
-		port: 8080,
+		port: port,
 	}
 }
 
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
-	// TODO: 静的ファイル配信
-	// TODO: GitHub API プロキシ
+	// GitHub API proxy
+	proxy, err := newProxyHandler()
+	if err != nil {
+		return fmt.Errorf("failed to create proxy handler: %w", err)
+	}
+	mux.HandleFunc("/api/github/rest/", proxy.ServeRESTProxy)
+	mux.HandleFunc("/api/github/graphql", proxy.ServeGraphQLProxy)
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("gh-issue-treefier"))
-	})
+	// Static file serving with SPA fallback
+	mux.Handle("/", newSPAHandler())
 
 	addr := fmt.Sprintf(":%d", s.port)
-	fmt.Printf("Starting server on http://localhost%s\n", addr)
 
 	return http.ListenAndServe(addr, mux)
 }

@@ -1,11 +1,14 @@
-.PHONY: build dev dev-web dev-go clean dashboard lint fmt
+.PHONY: build dev dev-web dev-go clean dashboard lint fmt test
 
 # ビルド
-build: build-web build-go
+build: build-web embed-dist build-go
 
 build-web:
 	cd web && npm run build
-	rm -rf dist && cp -r web/dist dist
+
+embed-dist:
+	rm -rf internal/server/dist
+	cp -r web/dist internal/server/dist
 
 build-go:
 	go build -o gh-issue-treefier ./cmd/gh-issue-treefier
@@ -15,7 +18,7 @@ dev-web:
 	cd web && npm run dev
 
 dev-go:
-	go run ./cmd/gh-issue-treefier
+	go run ./cmd/gh-issue-treefier console
 
 # リント・フォーマット
 lint:
@@ -25,9 +28,14 @@ fmt:
 	cd web && npx biome format --write .
 	cd web && npx biome check --write .
 
+# テスト
+test:
+	go test ./...
+	cd web && npm test
+
 # クリーンアップ
 clean:
-	rm -rf gh-issue-treefier dist web/dist
+	rm -rf gh-issue-treefier dist web/dist internal/server/dist
 
 # spec-workflow ダッシュボード
 dashboard:

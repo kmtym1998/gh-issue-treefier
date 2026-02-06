@@ -25,4 +25,5 @@ node_modules/
 # Build
 dist/
 build/
-gh-issue-treefier
+/gh-issue-treefier
+internal/server/dist/
