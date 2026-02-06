@@ -46,8 +46,10 @@ flowchart LR
 
 ### 外部連携
 
-- **APIs**: GitHub REST API（issue dependencies）
-- **Protocols**: HTTP/REST
+- **APIs**:
+  - GitHub REST API（issue dependencies）
+  - GitHub GraphQL API（プロジェクト、フィールド情報の取得）
+- **Protocols**: HTTP/REST, GraphQL
 - **Authentication**: `gh` CLI の認証情報を go-gh 経由で利用
 
 ## 技術的要件と制約

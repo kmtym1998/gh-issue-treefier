@@ -12,16 +12,14 @@ gh-issue-treefier MVP の設計ドキュメント。GitHub issue の依存関係
 
 - Go バックエンドで HTTP サーバーを起動し、React フロントエンドを embed で配信
 - go-gh を使用して gh CLI の認証情報を再利用
-- React Flow + Dagre でグラフ表示
+- React Flow（@xyflow/react）+ Dagre でグラフ表示
 - REST API と GraphQL API の両方をプロキシ
 
 ### プロジェクト構成 (structure.md)
 
 - `cmd/gh-issue-treefier/` - CLI エントリーポイント
-- `internal/server/` - HTTP サーバー（静的ファイル配信 + API プロキシ）
-- `web/src/api-client/` - GitHub API クライアント
-- `web/src/components/` - React コンポーネント
-- `web/src/hooks/` - カスタムフック
+- `internal/server/` - HTTP サーバー
+- `web/src/` - React アプリケーション
 
 ## アーキテクチャ
 
@@ -38,9 +36,9 @@ flowchart TB
     end
 
     subgraph Frontend["React App"]
-        App["App.tsx"]
-        Graph["Graph Component"]
-        Filter["Filter Component"]
+        components["Components"]
+        hooks["Hooks"]
+        apiClient["API Client"]
     end
 
     subgraph External["GitHub"]
@@ -53,94 +51,72 @@ flowchart TB
     static --> Frontend
     proxy --> REST
     proxy --> GraphQL
-    App --> Graph
-    App --> Filter
+    components --> hooks
+    hooks --> apiClient
 ```
 
 ### 設計パターンと原則
 
 - **単一責任原則**: サーバーは配信とプロキシのみ、ロジックはフロントエンドに集約
-- **コンポーネントの分離**: グラフ表示、フィルター、ノード詳細を独立したコンポーネントに
-- **サービス層の分離**: API クライアントを hooks から分離
+- **コンポーネントの分離**: 表示とデータ取得を分離
+- **シンプルさ優先**: MVP では最小限の構成から始め、必要に応じて分割
+
+### コンポーネント分割の方針
+
+MVP では以下の方針で進める：
+
+- **最初はシンプルに**: 1ファイルで完結できるものは分割しない
+- **分割の判断は実装時に**: 実装を進める中で複雑になったら分割を検討
+- **過度な抽象化を避ける**: 将来の拡張性より、今動くものを優先
+
+例えば：
+- カスタムノードは React Flow の標準機能で十分なら使わない
+- hooks は1つで済むなら分割しない
+- API クライアントも最小限の関数から始める
 
 ## コンポーネントとモジュール
 
-### コンポーネントの依存関係
+### バックエンド
 
-```mermaid
-flowchart TD
-    subgraph Backend
-        main["cmd/gh-issue-treefier/main.go"]
-        server["internal/server"]
-    end
+#### CLI (cmd/gh-issue-treefier)
 
-    subgraph Frontend
-        App["App.tsx"]
-        IssueGraph["issue-graph.tsx"]
-        IssueNode["issue-node.tsx"]
-        FilterPanel["filter-panel.tsx"]
-        useIssues["use-issues.ts"]
-        useDependencies["use-dependencies.ts"]
-        apiClient["api-client/"]
-    end
+- `console` サブコマンドを処理
+- `--port` オプションでポート指定（未指定時は空きポート自動採番）
+- サーバー起動後にブラウザを自動で開く
 
-    main --> server
-    App --> IssueGraph
-    App --> FilterPanel
-    IssueGraph --> IssueNode
-    IssueGraph --> useIssues
-    IssueGraph --> useDependencies
-    useIssues --> apiClient
-    useDependencies --> apiClient
-    FilterPanel --> apiClient
-```
+#### HTTP サーバー (internal/server)
 
-### cmd/gh-issue-treefier/main.go
+- 静的ファイル配信（embed された React ビルド成果物）
+- GitHub API プロキシ
+  - `/api/github/rest/*` → REST API
+  - `/api/github/graphql` → GraphQL API
+- go-gh で認証情報を取得し、リクエストに付与
 
-- **目的:** CLI エントリーポイント。`console` サブコマンドを処理
-- **依存関係:** internal/server
+### フロントエンド
 
-### internal/server
+#### API クライアント層
 
-- **目的:** HTTP サーバー。静的ファイル配信と GitHub API プロキシ
-- **依存関係:** go-gh（認証情報取得）
+- REST API と GraphQL API へのリクエストを抽象化
+- エラーハンドリングの共通化
 
-### web/src/api-client/
+#### データ取得層（Hooks）
 
-- **目的:** GitHub REST/GraphQL API へのリクエストを抽象化
-- **依存関係:** なし
+- Issue 一覧と依存関係の取得
+- プロジェクト・フィールド情報の取得（GraphQL）
+- フィルタ状態の管理
 
-### web/src/components/issue-graph.tsx
+#### 表示層（Components）
 
-- **目的:** React Flow を使用して issue の DAG を表示
-- **依存関係:** React Flow, Dagre, use-issues, use-dependencies
-
-### web/src/components/issue-node.tsx
-
-- **目的:** グラフ上の個別ノード（issue）の表示
-- **依存関係:** React Flow
-
-### web/src/components/filter-panel.tsx
-
-- **目的:** プロジェクト、フィールド、状態によるフィルタリング UI
-- **依存関係:** api-client
-
-### web/src/hooks/use-issues.ts
-
-- **目的:** issue 一覧の取得と状態管理
-- **依存関係:** api-client
-
-### web/src/hooks/use-dependencies.ts
-
-- **目的:** issue 依存関係の取得と状態管理
-- **依存関係:** api-client
+- React Flow を使用した DAG 表示
+- Dagre による自動レイアウト
+- フィルタ UI（プロジェクト、フィールド、状態）
+- ノード詳細表示
 
 ## データモデル
 
 ```mermaid
 erDiagram
     Issue ||--o{ Dependency : "blocked_by"
-    Issue ||--o{ Dependency : "blocking"
     Project ||--o{ ProjectField : "has"
     Project ||--o{ Issue : "contains"
 
@@ -155,7 +131,6 @@ erDiagram
     Dependency {
         source_issue int
         target_issue int
-        type string
     }
 
     Project {
@@ -173,31 +148,20 @@ erDiagram
 
 ## エラーハンドリング
 
-### エラーシナリオ
-
-1. **GitHub API 認証エラー**
-   - **ハンドリング:** 401 を返し、フロントエンドでエラーメッセージ表示
-   - **ユーザーへの影響:** 「gh auth login を実行してください」と表示
-
-2. **リポジトリが見つからない**
-   - **ハンドリング:** 404 を返す
-   - **ユーザーへの影響:** 「リポジトリが見つかりません」と表示
-
-3. **API レート制限**
-   - **ハンドリング:** 429 を返し、Retry-After ヘッダーを転送
-   - **ユーザーへの影響:** 「API レート制限に達しました。しばらく待ってください」と表示
-
-4. **ネットワークエラー**
-   - **ハンドリング:** フロントエンドで fetch エラーをキャッチ
-   - **ユーザーへの影響:** 「接続エラーが発生しました」と表示
+| シナリオ | ハンドリング | ユーザーへの影響 |
+|---------|-------------|----------------|
+| 認証エラー | 401 を返す | 「gh auth login を実行してください」 |
+| リポジトリ不明 | 404 を返す | 「リポジトリが見つかりません」 |
+| API レート制限 | 429 + Retry-After | 「レート制限に達しました」 |
+| ネットワークエラー | fetch エラーをキャッチ | 「接続エラーが発生しました」 |
 
 ## テスト戦略
 
 ### ユニットテスト
 
-- **Go**: internal/server のプロキシロジック
-- **React**: hooks のデータ変換ロジック、コンポーネントのレンダリング
+- Go: プロキシロジック
+- React: データ変換ロジック
 
 ### E2E テスト
 
-- MVP ではスコープ外（将来的に Playwright で実装予定）
+- MVP ではスコープ外
