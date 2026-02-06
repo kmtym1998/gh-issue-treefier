@@ -58,7 +58,7 @@
   - _Requirements: GitHub API プロキシ_
   - _Prompt: Role: Go Developer | Task: /api/github/graphql へのPOSTリクエストを api.github.com/graphql に転送。go-gh の GraphQLClient または RESTClient を使用 | Restrictions: クエリはフロントエンドから受け取る | Success: GraphQL クエリでプロジェクト情報が取得できる_
 
-- [-] 4.1. GraphQL API プロキシのテスト
+- [x] 4.1. GraphQL API プロキシのテスト
   - File: internal/server/proxy_test.go
   - GraphQL リクエストの転送テスト
   - リクエストボディが正しく転送されるかのテスト
