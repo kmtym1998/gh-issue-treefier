@@ -145,7 +145,7 @@
   - _Leverage: vitest, Storybook interaction tests_
   - _Prompt: Role: React Developer | Task: (1) 純粋関数として切り出した nodes/edges 変換ロジックを vitest でテスト (2) Storybook で IssueGraph の Story を作成し、play 関数でパン・ズーム操作をテスト | Success: 変換ロジックが正しく動作し、UI 操作が期待通り動く_
 
-- [ ] 10. フィルタ UI の実装
+- [x] 10. フィルタ UI の実装
   - File: web/src/components/filter-panel.tsx
   - リポジトリ入力フォーム
   - プロジェクト選択ドロップダウン
@@ -156,7 +156,7 @@
   - _Requirements: Issue 一覧取得_
   - _Prompt: Role: React Developer | Task: フィルタ条件を選択する UI。onChange で親コンポーネントに通知。プロジェクト選択時にフィールド一覧を動的に取得 | Restrictions: CSS フレームワーク不要、最低限のスタイルで | Success: フィルタを変更すると表示される issue が変わる_
 
-- [ ] 10.1. フィルタ UI のテスト
+- [x] 10.1. フィルタ UI のテスト
   - File: web/src/components/filter-panel.stories.tsx
   - フォーム入力・選択操作のインタラクションテスト
   - onChange コールバックの呼び出し検証
@@ -164,7 +164,7 @@
   - _Leverage: Storybook interaction tests_
   - _Prompt: Role: React Developer | Task: FilterPanel の Story を作成。play 関数でリポジトリ入力、プロジェクト選択、状態変更を操作し、onChange が正しく呼ばれることを検証 | Success: 各操作で期待する onChange が発火する_
 
-- [ ] 11. ノード詳細表示の実装
+- [x] 11. ノード詳細表示の実装
   - File: web/src/components/issue-detail.tsx
   - ノードクリックで issue 詳細を表示
   - タイトル、番号、状態、ラベル
@@ -173,7 +173,7 @@
   - _Requirements: ノード情報表示_
   - _Prompt: Role: React Developer | Task: 選択された issue の詳細を表示するパネル。ReactFlow の onNodeClick で選択状態を管理。GitHub URL へのリンクを含める | Restrictions: モーダルではなくサイドパネルで | Success: ノードクリックで詳細が表示され、リンクから GitHub に飛べる_
 
-- [ ] 11.1. ノード詳細表示のテスト
+- [x] 11.1. ノード詳細表示のテスト
   - File: web/src/components/issue-detail.stories.tsx
   - 各状態（open/closed）での表示テスト
   - GitHub リンクの存在確認
