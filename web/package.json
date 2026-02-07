@@ -9,8 +9,9 @@
     "lint": "biome check .",
     "format": "biome format --write . && biome check --write .",
     "preview": "vite preview",
-    "test": "vitest --project=storybook --run",
-    "test:watch": "vitest --project=storybook",
+    "test": "vitest --project=unit --run",
+    "test:watch": "vitest --project=unit",
+    "test:storybook": "vitest --project=storybook --run",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
