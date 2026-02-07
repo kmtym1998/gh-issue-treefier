@@ -4,10 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
 
+	"github.com/cli/go-gh/v2/pkg/repository"
 	"github.com/kmtym1998/gh-issue-treefier/internal/server"
 )
 
@@ -51,15 +53,27 @@ func runConsole(args []string) error {
 
 	srv := server.New(actualPort)
 
-	url := fmt.Sprintf("http://localhost:%d", actualPort)
-	fmt.Printf("Starting server on %s\n", url)
+	openURL := buildURL(actualPort)
+	fmt.Printf("Starting server on http://localhost:%d\n", actualPort)
 
 	// Open browser
-	if err := openBrowser(url); err != nil {
+	if err := openBrowser(openURL); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to open browser: %v\n", err)
 	}
 
 	return srv.Start()
+}
+
+func buildURL(port int) string {
+	u := fmt.Sprintf("http://localhost:%d", port)
+	repo, err := repository.Current()
+	if err != nil {
+		return u
+	}
+	q := url.Values{}
+	q.Set("owner", repo.Owner)
+	q.Set("repo", repo.Name)
+	return u + "?" + q.Encode()
 }
 
 func openBrowser(url string) error {

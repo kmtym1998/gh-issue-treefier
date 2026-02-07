@@ -11,10 +11,11 @@ export interface FilterValues {
 }
 
 export interface FilterPanelProps {
+  defaultValues?: Partial<FilterValues>;
   onChange: (filters: FilterValues) => void;
 }
 
-const initialFilters: FilterValues = {
+const defaultFilters: FilterValues = {
   owner: "",
   repo: "",
   state: "open",
@@ -22,8 +23,11 @@ const initialFilters: FilterValues = {
   fieldFilters: {},
 };
 
-export function FilterPanel({ onChange }: FilterPanelProps) {
-  const [filters, setFilters] = useState<FilterValues>(initialFilters);
+export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
+  const [filters, setFilters] = useState<FilterValues>({
+    ...defaultFilters,
+    ...defaultValues,
+  });
 
   const { projects, loading: projectsLoading } = useProjects(filters.owner);
   const { fields, loading: fieldsLoading } = useProjectFields(
