@@ -8,7 +8,7 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import dagre from "dagre";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import type { Dependency, Issue } from "../types/issue";
 
 import "@xyflow/react/dist/style.css";
@@ -91,9 +91,14 @@ export function layoutNodes(
 export interface IssueGraphProps {
   issues: Issue[];
   dependencies: Dependency[];
+  onNodeClick?: (issueNumber: number) => void;
 }
 
-export function IssueGraph({ issues, dependencies }: IssueGraphProps) {
+export function IssueGraph({
+  issues,
+  dependencies,
+  onNodeClick,
+}: IssueGraphProps) {
   const rawNodes = issuesToNodes(issues);
   const rawEdges = dependenciesToEdges(dependencies);
   const layouted = layoutNodes(rawNodes, rawEdges);
@@ -109,6 +114,13 @@ export function IssueGraph({ issues, dependencies }: IssueGraphProps) {
     setEdges(newEdges);
   }, [issues, dependencies, setNodes, setEdges]);
 
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      onNodeClick?.(Number(node.id));
+    },
+    [onNodeClick],
+  );
+
   return (
     <div style={{ width: "100%", height: "100%" }}>
       <ReactFlow
@@ -116,6 +128,7 @@ export function IssueGraph({ issues, dependencies }: IssueGraphProps) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
         fitView
         proOptions={{ hideAttribution: true }}
       >

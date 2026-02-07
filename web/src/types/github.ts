@@ -3,8 +3,10 @@ export interface GitHubIssue {
   number: number;
   title: string;
   state: string;
+  body: string | null;
   html_url: string;
   labels: Array<{ name: string; color: string }>;
+  assignees: Array<{ login: string; avatar_url: string }>;
   pull_request?: unknown;
   sub_issues_summary?: {
     total: number;

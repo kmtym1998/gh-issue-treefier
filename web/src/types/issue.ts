@@ -2,8 +2,15 @@ export interface Issue {
   number: number;
   title: string;
   state: "open" | "closed";
+  body: string;
   labels: Label[];
+  assignees: Assignee[];
   url: string;
+}
+
+export interface Assignee {
+  login: string;
+  avatarUrl: string;
 }
 
 export interface Label {

@@ -27,7 +27,12 @@ export function parseIssues(raw: GitHubIssue[]): Issue[] {
       number: i.number,
       title: i.title,
       state: i.state as "open" | "closed",
+      body: i.body ?? "",
       labels: i.labels.map((l) => ({ name: l.name, color: l.color })),
+      assignees: (i.assignees ?? []).map((a) => ({
+        login: a.login,
+        avatarUrl: a.avatar_url,
+      })),
       url: i.html_url,
     }));
 }

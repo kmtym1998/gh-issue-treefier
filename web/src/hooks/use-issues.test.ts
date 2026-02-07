@@ -9,15 +9,21 @@ describe("parseIssues", () => {
         number: 1,
         title: "Bug fix",
         state: "open",
+        body: "Fix the login bug",
         html_url: "https://github.com/owner/repo/issues/1",
         labels: [{ name: "bug", color: "d73a4a" }],
+        assignees: [
+          { login: "alice", avatar_url: "https://example.com/alice.png" },
+        ],
       },
       {
         number: 2,
         title: "Feature",
         state: "closed",
+        body: null,
         html_url: "https://github.com/owner/repo/issues/2",
         labels: [],
+        assignees: [],
       },
     ];
 
@@ -28,14 +34,20 @@ describe("parseIssues", () => {
         number: 1,
         title: "Bug fix",
         state: "open",
+        body: "Fix the login bug",
         labels: [{ name: "bug", color: "d73a4a" }],
+        assignees: [
+          { login: "alice", avatarUrl: "https://example.com/alice.png" },
+        ],
         url: "https://github.com/owner/repo/issues/1",
       },
       {
         number: 2,
         title: "Feature",
         state: "closed",
+        body: "",
         labels: [],
+        assignees: [],
         url: "https://github.com/owner/repo/issues/2",
       },
     ]);
@@ -47,15 +59,19 @@ describe("parseIssues", () => {
         number: 1,
         title: "Issue",
         state: "open",
+        body: null,
         html_url: "https://github.com/owner/repo/issues/1",
         labels: [],
+        assignees: [],
       },
       {
         number: 2,
         title: "PR",
         state: "open",
+        body: null,
         html_url: "https://github.com/owner/repo/pull/2",
         labels: [],
+        assignees: [],
         pull_request: {
           url: "https://api.github.com/repos/owner/repo/pulls/2",
         },
