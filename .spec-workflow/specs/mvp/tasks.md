@@ -127,7 +127,7 @@
   - _Leverage: vitest_
   - _Prompt: Role: TypeScript Developer | Task: GraphQL レスポンスをパースするロジックを純粋関数として切り出し、vitest でテスト。フック自体は Storybook で統合テスト | Success: 各フィールド型が正しく処理される_
 
-- [ ] 9. React Flow グラフ表示の実装
+- [x] 9. React Flow グラフ表示の実装
   - File: web/src/components/issue-graph.tsx
   - Issue をノード、依存関係をエッジとして表示
   - Dagre による自動レイアウト
@@ -137,7 +137,7 @@
   - _Requirements: グラフ表示_
   - _Prompt: Role: React Developer | Task: ReactFlow コンポーネントで DAG 表示。issues 配列から nodes を、dependencies から edges を生成。dagre でレイアウト計算後に ReactFlow に渡す | Restrictions: カスタムノードは必要になるまで使わない | Success: Issue が矢印で繋がった状態で表示される_
 
-- [ ] 9.1. グラフデータ変換のテスト
+- [x] 9.1. グラフデータ変換のテスト
   - File: web/src/components/issue-graph.test.ts, web/src/components/issue-graph.stories.tsx
   - Issues → Nodes 変換ロジックのテスト（vitest）
   - コンポーネントの表示・操作テスト（Storybook）
