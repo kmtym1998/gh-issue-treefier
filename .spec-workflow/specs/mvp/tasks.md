@@ -68,7 +68,7 @@
 
 ## フロントエンド
 
-- [ ] 5. Storybook セットアップ
+- [x] 5. Storybook セットアップ
   - File: web/.storybook/main.ts, web/.storybook/preview.ts
   - Storybook + Vite の設定
   - インタラクションテスト用アドオンの追加
