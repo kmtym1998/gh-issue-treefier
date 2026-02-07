@@ -77,7 +77,7 @@
   - _Leverage: @storybook/react-vite, @storybook/test, msw-storybook-addon_
   - _Prompt: Role: React Developer | Task: Storybook を Vite プロジェクトに追加。@storybook/addon-interactions でインタラクションテスト、msw-storybook-addon で API モックを有効化 | Success: npm run storybook で起動、play 関数が動作する_
 
-- [ ] 6. API クライアント層の実装
+- [x] 6. API クライアント層の実装
   - File: web/src/api-client/index.ts
   - REST API と GraphQL API へのリクエスト関数
   - エラーハンドリングの共通化
@@ -85,7 +85,7 @@
   - _Requirements: Issue 一覧取得, 依存関係取得_
   - _Prompt: Role: TypeScript Developer | Task: fetch ベースの API クライアント。restGet, restPost, graphql 関数を実装。エラー時は統一的な Error オブジェクトを throw | Restrictions: 外部ライブラリ不要、fetch のみ | Success: apiClient.restGet('/repos/...') で GitHub API を呼べる_
 
-- [ ] 6.1. API クライアントのテスト
+- [x] 6.1. API クライアントのテスト
   - File: web/src/api-client/index.test.ts
   - 成功時のレスポンス処理テスト
   - エラー時の例外処理テスト（401, 404, 500）
@@ -93,7 +93,7 @@
   - _Leverage: vitest, msw または fetch モック_
   - _Prompt: Role: TypeScript Developer | Task: fetch をモックして restGet, graphql 関数をテスト。成功ケース、HTTP エラー、ネットワークエラーを検証。純粋な関数なので vitest で単体テスト | Success: 各ケースで期待する動作をする_
 
-- [ ] 7. Issue データ取得の実装
+- [x] 7. Issue データ取得の実装
   - File: web/src/hooks/use-issues.ts
   - Issue 一覧と依存関係を取得するカスタムフック
   - フィルタ条件（リポジトリ、状態）を受け取る
@@ -103,7 +103,7 @@
   - _Requirements: Issue 一覧取得, 依存関係取得_
   - _Prompt: Role: React Developer | Task: useIssues(owner, repo, filters) フックを実装。REST API で issue 一覧を取得し、各 issue の依存関係も取得。useState + useEffect でシンプルに | Restrictions: 外部状態管理ライブラリ不要 | Success: const { issues, dependencies, loading, error } = useIssues(...) で使える_
 
-- [ ] 7.1. Issue データ取得のテスト
+- [x] 7.1. Issue データ取得のテスト
   - File: web/src/hooks/use-issues.test.ts
   - API レスポンスから内部データ構造への変換テスト
   - Purpose: データ変換ロジックの信頼性確保
