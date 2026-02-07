@@ -21,3 +21,21 @@ export interface GitHubSubIssue {
   html_url: string;
   parent?: { number: number };
 }
+
+/** GitHub GraphQL ProjectV2 ノード */
+export interface GitHubProjectV2Node {
+  id: string;
+  title: string;
+  number: number;
+}
+
+/** GitHub GraphQL ProjectV2 フィールドノード（union 型の共通部分） */
+export interface GitHubProjectV2FieldNode {
+  id: string;
+  name: string;
+  dataType: string;
+  options?: Array<{ id: string; name: string }>;
+  configuration?: {
+    iterations?: Array<{ id: string; title: string }>;
+  };
+}

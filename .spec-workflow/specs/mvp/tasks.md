@@ -110,7 +110,7 @@
   - _Leverage: vitest_
   - _Prompt: Role: TypeScript Developer | Task: API レスポンスを内部データ構造に変換するロジックを純粋関数として切り出し、vitest でテスト。フック自体は Storybook で統合テスト | Success: 変換ロジックが正しく動作する_
 
-- [ ] 8. プロジェクト・フィールド情報取得の実装
+- [x] 8. プロジェクト・フィールド情報取得の実装
   - File: web/src/hooks/use-projects.ts
   - GraphQL でプロジェクト一覧を取得
   - プロジェクトのフィールド（イテレーション、ステータス等）を取得
@@ -119,7 +119,7 @@
   - _Requirements: Issue 一覧取得_
   - _Prompt: Role: React Developer | Task: useProjects(owner) でユーザー/組織のプロジェクト一覧を取得。useProjectFields(projectId) でフィールド定義を取得。GraphQL API を使用 | Restrictions: シンプルな実装から始める | Success: プロジェクト選択時にフィールド一覧が表示できる_
 
-- [ ] 8.1. プロジェクト・フィールド取得のテスト
+- [x] 8.1. プロジェクト・フィールド取得のテスト
   - File: web/src/hooks/use-projects.test.ts
   - GraphQL レスポンスのパーステスト
   - フィールド型（イテレーション、ステータス等）の処理テスト
