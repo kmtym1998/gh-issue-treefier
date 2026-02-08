@@ -25,7 +25,10 @@ type Story = StoryObj<typeof meta>;
 export const Open: Story = {
   args: {
     issue: {
+      id: "owner/repo#42",
       number: 42,
+      owner: "owner",
+      repo: "repo",
       title: "Implement user authentication",
       state: "open",
       body: "We need to add OAuth2 support for Google and GitHub providers.\n\nAcceptance criteria:\n- Users can sign in with Google\n- Users can sign in with GitHub",
@@ -43,6 +46,7 @@ export const Open: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
+    expect(canvas.getByText("owner/repo")).toBeDefined();
     expect(canvas.getByText("#42")).toBeDefined();
     expect(canvas.getByText(/Implement user authentication/)).toBeDefined();
     expect(canvas.getByText("open")).toBeDefined();
@@ -63,7 +67,10 @@ export const Open: Story = {
 export const Closed: Story = {
   args: {
     issue: {
+      id: "owner/repo#7",
       number: 7,
+      owner: "owner",
+      repo: "repo",
       title: "Fix login redirect bug",
       state: "closed",
       body: "Fixed in PR #8.",
@@ -86,7 +93,10 @@ export const Closed: Story = {
 export const NoLabels: Story = {
   args: {
     issue: {
+      id: "owner/repo#100",
       number: 100,
+      owner: "owner",
+      repo: "repo",
       title: "Simple task without labels",
       state: "open",
       body: "",
@@ -111,5 +121,28 @@ export const NullIssue: Story = {
     const canvas = within(canvasElement);
 
     expect(canvas.queryByText("View on GitHub")).toBeNull();
+  },
+};
+
+export const CrossRepo: Story = {
+  args: {
+    issue: {
+      id: "org/backend#15",
+      number: 15,
+      owner: "org",
+      repo: "backend",
+      title: "Add metrics API",
+      state: "open",
+      body: "New endpoint for dashboard metrics.",
+      labels: [{ name: "api", color: "0075ca" }],
+      assignees: [],
+      url: "https://github.com/org/backend/issues/15",
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    expect(canvas.getByText("org/backend")).toBeDefined();
+    expect(canvas.getByText("#15")).toBeDefined();
   },
 };

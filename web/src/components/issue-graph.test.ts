@@ -4,7 +4,10 @@ import { dependenciesToEdges, issuesToNodes, layoutNodes } from "./issue-graph";
 
 const sampleIssues: Issue[] = [
   {
+    id: "owner/repo#1",
     number: 1,
+    owner: "owner",
+    repo: "repo",
     title: "Parent issue",
     state: "open",
     body: "",
@@ -13,7 +16,10 @@ const sampleIssues: Issue[] = [
     url: "https://github.com/owner/repo/issues/1",
   },
   {
+    id: "owner/repo#2",
     number: 2,
+    owner: "owner",
+    repo: "repo",
     title: "Child issue",
     state: "closed",
     body: "",
@@ -22,7 +28,10 @@ const sampleIssues: Issue[] = [
     url: "https://github.com/owner/repo/issues/2",
   },
   {
+    id: "owner/repo#3",
     number: 3,
+    owner: "owner",
+    repo: "repo",
     title: "Another child",
     state: "open",
     body: "",
@@ -33,19 +42,53 @@ const sampleIssues: Issue[] = [
 ];
 
 const sampleDependencies: Dependency[] = [
-  { source: 1, target: 2 },
-  { source: 1, target: 3 },
+  { source: "owner/repo#1", target: "owner/repo#2" },
+  { source: "owner/repo#1", target: "owner/repo#3" },
 ];
 
 describe("issuesToNodes", () => {
-  it("converts issues to ReactFlow nodes", () => {
+  it("converts issues to ReactFlow nodes with composite IDs", () => {
     const nodes = issuesToNodes(sampleIssues);
 
     expect(nodes).toHaveLength(3);
-    expect(nodes[0].id).toBe("1");
+    expect(nodes[0].id).toBe("owner/repo#1");
     expect(nodes[0].data.label).toBe("#1 Parent issue");
-    expect(nodes[1].id).toBe("2");
-    expect(nodes[2].id).toBe("3");
+    expect(nodes[1].id).toBe("owner/repo#2");
+    expect(nodes[2].id).toBe("owner/repo#3");
+  });
+
+  it("includes repo name in label for multi-repo issues", () => {
+    const multiRepoIssues: Issue[] = [
+      {
+        id: "owner/frontend#1",
+        number: 1,
+        owner: "owner",
+        repo: "frontend",
+        title: "UI bug",
+        state: "open",
+        body: "",
+        labels: [],
+        assignees: [],
+        url: "https://github.com/owner/frontend/issues/1",
+      },
+      {
+        id: "owner/backend#2",
+        number: 2,
+        owner: "owner",
+        repo: "backend",
+        title: "API fix",
+        state: "open",
+        body: "",
+        labels: [],
+        assignees: [],
+        url: "https://github.com/owner/backend/issues/2",
+      },
+    ];
+
+    const nodes = issuesToNodes(multiRepoIssues);
+
+    expect(nodes[0].data.label).toBe("frontend#1 UI bug");
+    expect(nodes[1].data.label).toBe("backend#2 API fix");
   });
 
   it("applies open state style", () => {
@@ -75,15 +118,15 @@ describe("dependenciesToEdges", () => {
 
     expect(edges).toHaveLength(2);
     expect(edges[0]).toEqual({
-      id: "e1-2",
-      source: "1",
-      target: "2",
+      id: "eowner/repo#1-owner/repo#2",
+      source: "owner/repo#1",
+      target: "owner/repo#2",
       animated: false,
     });
     expect(edges[1]).toEqual({
-      id: "e1-3",
-      source: "1",
-      target: "3",
+      id: "eowner/repo#1-owner/repo#3",
+      source: "owner/repo#1",
+      target: "owner/repo#3",
       animated: false,
     });
   });
@@ -113,14 +156,17 @@ describe("layoutNodes", () => {
     const edges = dependenciesToEdges(sampleDependencies);
     const layouted = layoutNodes(nodes, edges, "TB");
 
-    // Parent (node 1) should be above children (nodes 2, 3)
     const nodeMap = Object.fromEntries(layouted.map((n) => [n.id, n]));
 
-    expect(nodeMap["1"]).toBeDefined();
-    expect(nodeMap["2"]).toBeDefined();
-    expect(nodeMap["3"]).toBeDefined();
-    expect(nodeMap["1"].position.y).toBeLessThan(nodeMap["2"].position.y);
-    expect(nodeMap["1"].position.y).toBeLessThan(nodeMap["3"].position.y);
+    expect(nodeMap["owner/repo#1"]).toBeDefined();
+    expect(nodeMap["owner/repo#2"]).toBeDefined();
+    expect(nodeMap["owner/repo#3"]).toBeDefined();
+    expect(nodeMap["owner/repo#1"].position.y).toBeLessThan(
+      nodeMap["owner/repo#2"].position.y,
+    );
+    expect(nodeMap["owner/repo#1"].position.y).toBeLessThan(
+      nodeMap["owner/repo#3"].position.y,
+    );
   });
 
   it("sets LR direction positions correctly", () => {
@@ -128,12 +174,13 @@ describe("layoutNodes", () => {
     const edges = dependenciesToEdges(sampleDependencies);
     const layouted = layoutNodes(nodes, edges, "LR");
 
-    // Parent (node 1) should be left of children (nodes 2, 3)
     const nodeMap = Object.fromEntries(layouted.map((n) => [n.id, n]));
 
-    expect(nodeMap["1"]).toBeDefined();
-    expect(nodeMap["2"]).toBeDefined();
-    expect(nodeMap["1"].position.x).toBeLessThan(nodeMap["2"].position.x);
+    expect(nodeMap["owner/repo#1"]).toBeDefined();
+    expect(nodeMap["owner/repo#2"]).toBeDefined();
+    expect(nodeMap["owner/repo#1"].position.x).toBeLessThan(
+      nodeMap["owner/repo#2"].position.x,
+    );
   });
 
   it("sets sourcePosition and targetPosition for TB direction", () => {

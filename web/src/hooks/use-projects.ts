@@ -148,7 +148,7 @@ export function useProjects(owner: string): UseProjectsResult {
       setError(null);
 
       try {
-        // user クエリを試行し、失敗したら organization クエリにフォールバック
+        // user クエリを試行し、結果がなければ organization クエリにフォールバック
         let nodes: GitHubProjectV2Node[];
         try {
           const res = await graphql<ProjectsGraphQLResponse>(
@@ -157,11 +157,19 @@ export function useProjects(owner: string): UseProjectsResult {
           );
           nodes = res.data.user?.projectsV2.nodes ?? [];
         } catch {
-          const res = await graphql<ProjectsGraphQLResponse>(
-            PROJECTS_QUERY_ORG,
-            { owner },
-          );
-          nodes = res.data.organization?.projectsV2.nodes ?? [];
+          nodes = [];
+        }
+
+        if (nodes.length === 0) {
+          try {
+            const res = await graphql<ProjectsGraphQLResponse>(
+              PROJECTS_QUERY_ORG,
+              { owner },
+            );
+            nodes = res.data.organization?.projectsV2.nodes ?? [];
+          } catch {
+            // user でも organization でも見つからない場合は空
+          }
         }
 
         if (!cancelled) {

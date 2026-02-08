@@ -19,7 +19,10 @@ type Story = StoryObj<typeof meta>;
 
 const issues: Issue[] = [
   {
+    id: "owner/repo#1",
     number: 1,
+    owner: "owner",
+    repo: "repo",
     title: "Epic: Implement authentication",
     state: "open",
     body: "Top-level epic for auth.",
@@ -28,7 +31,10 @@ const issues: Issue[] = [
     url: "https://github.com/owner/repo/issues/1",
   },
   {
+    id: "owner/repo#2",
     number: 2,
+    owner: "owner",
+    repo: "repo",
     title: "Design login page",
     state: "closed",
     body: "",
@@ -37,7 +43,10 @@ const issues: Issue[] = [
     url: "https://github.com/owner/repo/issues/2",
   },
   {
+    id: "owner/repo#3",
     number: 3,
+    owner: "owner",
+    repo: "repo",
     title: "Implement OAuth provider",
     state: "open",
     body: "",
@@ -46,7 +55,10 @@ const issues: Issue[] = [
     url: "https://github.com/owner/repo/issues/3",
   },
   {
+    id: "owner/repo#4",
     number: 4,
+    owner: "owner",
+    repo: "repo",
     title: "Add session management",
     state: "open",
     body: "",
@@ -55,7 +67,10 @@ const issues: Issue[] = [
     url: "https://github.com/owner/repo/issues/4",
   },
   {
+    id: "owner/repo#5",
     number: 5,
+    owner: "owner",
+    repo: "repo",
     title: "Write auth tests",
     state: "open",
     body: "",
@@ -66,11 +81,11 @@ const issues: Issue[] = [
 ];
 
 const dependencies: Dependency[] = [
-  { source: 1, target: 2 },
-  { source: 1, target: 3 },
-  { source: 1, target: 4 },
-  { source: 3, target: 5 },
-  { source: 4, target: 5 },
+  { source: "owner/repo#1", target: "owner/repo#2" },
+  { source: "owner/repo#1", target: "owner/repo#3" },
+  { source: "owner/repo#1", target: "owner/repo#4" },
+  { source: "owner/repo#3", target: "owner/repo#5" },
+  { source: "owner/repo#4", target: "owner/repo#5" },
 ];
 
 export const Default: Story = {
@@ -98,5 +113,69 @@ export const AllClosed: Story = {
   args: {
     issues: issues.map((i) => ({ ...i, state: "closed" as const })),
     dependencies,
+  },
+};
+
+const multiRepoIssues: Issue[] = [
+  {
+    id: "org/frontend#1",
+    number: 1,
+    owner: "org",
+    repo: "frontend",
+    title: "Epic: Dashboard redesign",
+    state: "open",
+    body: "",
+    labels: [{ name: "epic", color: "0075ca" }],
+    assignees: [],
+    url: "https://github.com/org/frontend/issues/1",
+  },
+  {
+    id: "org/frontend#5",
+    number: 5,
+    owner: "org",
+    repo: "frontend",
+    title: "New chart components",
+    state: "open",
+    body: "",
+    labels: [],
+    assignees: [],
+    url: "https://github.com/org/frontend/issues/5",
+  },
+  {
+    id: "org/backend#10",
+    number: 10,
+    owner: "org",
+    repo: "backend",
+    title: "Metrics API endpoint",
+    state: "open",
+    body: "",
+    labels: [{ name: "api", color: "d73a4a" }],
+    assignees: [],
+    url: "https://github.com/org/backend/issues/10",
+  },
+  {
+    id: "org/infra#3",
+    number: 3,
+    owner: "org",
+    repo: "infra",
+    title: "Deploy monitoring stack",
+    state: "closed",
+    body: "",
+    labels: [],
+    assignees: [],
+    url: "https://github.com/org/infra/issues/3",
+  },
+];
+
+const multiRepoDeps: Dependency[] = [
+  { source: "org/frontend#1", target: "org/frontend#5" },
+  { source: "org/frontend#1", target: "org/backend#10" },
+  { source: "org/backend#10", target: "org/infra#3" },
+];
+
+export const MultiRepo: Story = {
+  args: {
+    issues: multiRepoIssues,
+    dependencies: multiRepoDeps,
   },
 };

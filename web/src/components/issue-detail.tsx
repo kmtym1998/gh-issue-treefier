@@ -25,6 +25,10 @@ export function IssueDetail({ issue, onClose }: IssueDetailProps) {
         </button>
       </div>
 
+      <div style={styles.repoBadge}>
+        {issue.owner}/{issue.repo}
+      </div>
+
       <h3 style={styles.title}>
         <span style={styles.number}>#{issue.number}</span> {issue.title}
       </h3>
@@ -109,6 +113,15 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#656d76",
     lineHeight: 1,
     padding: "2px 6px",
+  },
+  repoBadge: {
+    fontSize: 11,
+    color: "#656d76",
+    background: "#f6f8fa",
+    padding: "2px 6px",
+    borderRadius: 4,
+    alignSelf: "flex-start",
+    fontFamily: "monospace",
   },
   title: {
     margin: 0,

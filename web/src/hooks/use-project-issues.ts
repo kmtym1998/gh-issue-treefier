@@ -1,0 +1,240 @@
+import { useEffect, useState } from "react";
+import { graphql } from "../api-client";
+import type { GitHubProjectV2Item } from "../types/github";
+import type { Dependency, Issue } from "../types/issue";
+
+export interface UseProjectIssuesOptions {
+  projectId: string;
+  state?: "open" | "closed" | "all";
+  fieldFilters?: Record<string, string>;
+}
+
+export interface UseProjectIssuesResult {
+  issues: Issue[];
+  dependencies: Dependency[];
+  loading: boolean;
+  error: Error | null;
+}
+
+const PROJECT_ITEMS_QUERY = `
+  query($projectId: ID!, $cursor: String) {
+    node(id: $projectId) {
+      ... on ProjectV2 {
+        items(first: 100, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            id
+            content {
+              ... on Issue {
+                number title state body url
+                repository { owner { login } name }
+                labels(first: 20) { nodes { name color } }
+                assignees(first: 10) { nodes { login avatarUrl } }
+                subIssues(first: 50) {
+                  nodes { number repository { owner { login } name } }
+                }
+              }
+            }
+            fieldValues(first: 20) {
+              nodes {
+                ... on ProjectV2ItemFieldSingleSelectValue { field { ... on ProjectV2FieldCommon { id } } optionId }
+                ... on ProjectV2ItemFieldIterationValue { field { ... on ProjectV2FieldCommon { id } } iterationId }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface ProjectItemsGraphQLResponse {
+  data: {
+    node: {
+      items: {
+        pageInfo: { hasNextPage: boolean; endCursor: string | null };
+        nodes: GitHubProjectV2Item[];
+      };
+    };
+  };
+}
+
+/**
+ * owner/repo#number 形式の複合 ID を生成する。
+ */
+export function buildIssueId(
+  owner: string,
+  repo: string,
+  number: number,
+): string {
+  return `${owner}/${repo}#${number}`;
+}
+
+/**
+ * content が Issue のデータを持つか判定する。
+ * GraphQL の `... on Issue` フラグメントは DraftIssue に対して空オブジェクト `{}` を返すため、
+ * null チェックだけでは不十分。`number` プロパティの存在で判定する。
+ */
+function isIssueContent(
+  content: GitHubProjectV2Item["content"],
+): content is NonNullable<GitHubProjectV2Item["content"]> {
+  return content != null && "number" in content;
+}
+
+/**
+ * GraphQL ProjectV2 Items から内部の Issue 型に変換する。
+ * DraftIssue (content が空オブジェクトまたは null) は除外する。
+ */
+export function parseProjectItems(items: GitHubProjectV2Item[]): Issue[] {
+  return items
+    .filter(
+      (
+        item,
+      ): item is GitHubProjectV2Item & {
+        content: NonNullable<GitHubProjectV2Item["content"]>;
+      } => isIssueContent(item.content),
+    )
+    .map((item) => {
+      const c = item.content;
+      const owner = c.repository.owner.login;
+      const repo = c.repository.name;
+      return {
+        id: buildIssueId(owner, repo, c.number),
+        number: c.number,
+        owner,
+        repo,
+        title: c.title,
+        state: c.state.toLowerCase() as "open" | "closed",
+        body: c.body ?? "",
+        labels: c.labels.nodes.map((l) => ({ name: l.name, color: l.color })),
+        assignees: c.assignees.nodes.map((a) => ({
+          login: a.login,
+          avatarUrl: a.avatarUrl,
+        })),
+        url: c.url,
+      };
+    });
+}
+
+/**
+ * GraphQL ProjectV2 Items から subIssues を使って依存関係を構築する。
+ */
+export function parseProjectDependencies(
+  items: GitHubProjectV2Item[],
+): Dependency[] {
+  const deps: Dependency[] = [];
+  for (const item of items) {
+    if (!isIssueContent(item.content)) continue;
+    const c = item.content;
+    const parentOwner = c.repository.owner.login;
+    const parentRepo = c.repository.name;
+    const parentId = buildIssueId(parentOwner, parentRepo, c.number);
+
+    for (const sub of c.subIssues.nodes) {
+      const childOwner = sub.repository.owner.login;
+      const childRepo = sub.repository.name;
+      const childId = buildIssueId(childOwner, childRepo, sub.number);
+      deps.push({ source: parentId, target: childId });
+    }
+  }
+  return deps;
+}
+
+/**
+ * field フィルタに一致するか判定する。
+ */
+function matchesFieldFilters(
+  item: GitHubProjectV2Item,
+  fieldFilters: Record<string, string>,
+): boolean {
+  for (const [fieldId, value] of Object.entries(fieldFilters)) {
+    if (!value) continue;
+    const match = item.fieldValues.nodes.some(
+      (fv) =>
+        fv.field?.id === fieldId &&
+        (fv.optionId === value || fv.iterationId === value),
+    );
+    if (!match) return false;
+  }
+  return true;
+}
+
+export function useProjectIssues(
+  options: UseProjectIssuesOptions,
+): UseProjectIssuesResult {
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [dependencies, setDependencies] = useState<Dependency[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!options.projectId) return;
+
+    let cancelled = false;
+
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // ページネーション付きで全 Item を取得
+        const allItems: GitHubProjectV2Item[] = [];
+        let cursor: string | null = null;
+
+        let hasNextPage = true;
+        while (hasNextPage) {
+          if (cancelled) return;
+          const res: ProjectItemsGraphQLResponse =
+            await graphql<ProjectItemsGraphQLResponse>(PROJECT_ITEMS_QUERY, {
+              projectId: options.projectId,
+              cursor,
+            });
+          const page = res.data.node.items;
+          allItems.push(...page.nodes);
+          cursor = page.pageInfo.endCursor;
+          hasNextPage = page.pageInfo.hasNextPage;
+        }
+
+        if (cancelled) return;
+
+        // field フィルタを適用
+        const ff = options.fieldFilters;
+        const filtered =
+          ff && Object.keys(ff).length > 0
+            ? allItems.filter((item) => matchesFieldFilters(item, ff))
+            : allItems;
+
+        // Issue に変換
+        let parsed = parseProjectItems(filtered);
+
+        // state フィルタをクライアントサイドで適用
+        if (options.state && options.state !== "all") {
+          parsed = parsed.filter((i) => i.state === options.state);
+        }
+
+        // 依存関係は全 Item (フィルタ前) から構築
+        const allDeps = parseProjectDependencies(allItems);
+
+        if (!cancelled) {
+          setIssues(parsed);
+          setDependencies(allDeps);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+    return () => {
+      cancelled = true;
+    };
+  }, [options.projectId, options.state, options.fieldFilters]);
+
+  return { issues, dependencies, loading, error };
+}

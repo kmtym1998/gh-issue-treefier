@@ -19,12 +19,18 @@ const NODE_HEIGHT = 40;
 /**
  * Issue 配列を ReactFlow の Node 配列に変換する。
  * position は仮の値（0, 0）で、layoutNodes で更新される。
+ * 複数リポジトリがある場合はラベルに repo 名を含める。
  */
 export function issuesToNodes(issues: Issue[]): Node[] {
+  const repos = new Set(issues.map((i) => `${i.owner}/${i.repo}`));
+  const isMultiRepo = repos.size > 1;
+
   return issues.map((issue) => ({
-    id: String(issue.number),
+    id: issue.id,
     data: {
-      label: `#${issue.number} ${issue.title}`,
+      label: isMultiRepo
+        ? `${issue.repo}#${issue.number} ${issue.title}`
+        : `#${issue.number} ${issue.title}`,
     },
     position: { x: 0, y: 0 },
     style: {
@@ -44,8 +50,8 @@ export function issuesToNodes(issues: Issue[]): Node[] {
 export function dependenciesToEdges(dependencies: Dependency[]): Edge[] {
   return dependencies.map((dep) => ({
     id: `e${dep.source}-${dep.target}`,
-    source: String(dep.source),
-    target: String(dep.target),
+    source: dep.source,
+    target: dep.target,
     animated: false,
   }));
 }
@@ -91,7 +97,7 @@ export function layoutNodes(
 export interface IssueGraphProps {
   issues: Issue[];
   dependencies: Dependency[];
-  onNodeClick?: (issueNumber: number) => void;
+  onNodeClick?: (issueId: string) => void;
 }
 
 export function IssueGraph({
@@ -116,7 +122,7 @@ export function IssueGraph({
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      onNodeClick?.(Number(node.id));
+      onNodeClick?.(node.id);
     },
     [onNodeClick],
   );

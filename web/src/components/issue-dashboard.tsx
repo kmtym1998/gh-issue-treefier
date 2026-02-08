@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { useIssues } from "../hooks/use-issues";
+import { useProjectIssues } from "../hooks/use-project-issues";
 import { FilterPanel, type FilterValues } from "./filter-panel";
 import { IssueDetail } from "./issue-detail";
 import { IssueGraph } from "./issue-graph";
@@ -8,9 +8,7 @@ function getQueryParams(): Partial<FilterValues> {
   const params = new URLSearchParams(window.location.search);
   const result: Partial<FilterValues> = {};
   const owner = params.get("owner");
-  const repo = params.get("repo");
   if (owner) result.owner = owner;
-  if (repo) result.repo = repo;
   return result;
 }
 
@@ -19,33 +17,30 @@ export function IssueDashboard() {
 
   const [filters, setFilters] = useState<FilterValues>({
     owner: "",
-    repo: "",
     state: "open",
     projectId: "",
     fieldFilters: {},
     ...queryParams,
   });
-  const [selectedIssueNumber, setSelectedIssueNumber] = useState<number | null>(
-    null,
-  );
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
 
   const handleFilterChange = useCallback((next: FilterValues) => {
     setFilters(next);
-    setSelectedIssueNumber(null);
+    setSelectedIssueId(null);
   }, []);
 
-  const { issues, dependencies, loading, error } = useIssues({
-    owner: filters.owner,
-    repo: filters.repo,
+  const { issues, dependencies, loading, error } = useProjectIssues({
+    projectId: filters.projectId,
     state: filters.state,
+    fieldFilters: filters.fieldFilters,
   });
 
   const selectedIssue = useMemo(
-    () => issues.find((i) => i.number === selectedIssueNumber) ?? null,
-    [issues, selectedIssueNumber],
+    () => issues.find((i) => i.id === selectedIssueId) ?? null,
+    [issues, selectedIssueId],
   );
 
-  const hasQuery = filters.owner !== "" && filters.repo !== "";
+  const hasQuery = filters.owner !== "" && filters.projectId !== "";
 
   return (
     <div style={styles.root}>
@@ -55,7 +50,7 @@ export function IssueDashboard() {
         <div style={styles.graphArea}>
           {!hasQuery && (
             <p style={styles.placeholder}>
-              Owner と Repo を入力して Issue を表示
+              Owner を入力し Project を選択して Issue を表示
             </p>
           )}
 
@@ -73,14 +68,14 @@ export function IssueDashboard() {
             <IssueGraph
               issues={issues}
               dependencies={dependencies}
-              onNodeClick={setSelectedIssueNumber}
+              onNodeClick={setSelectedIssueId}
             />
           )}
         </div>
 
         <IssueDetail
           issue={selectedIssue}
-          onClose={() => setSelectedIssueNumber(null)}
+          onClose={() => setSelectedIssueId(null)}
         />
       </div>
     </div>

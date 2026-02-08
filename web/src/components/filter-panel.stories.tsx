@@ -90,22 +90,18 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const TypeOwnerAndRepo: Story = {
+export const TypeOwner: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
 
     const ownerInput = canvas.getByLabelText("Owner");
-    const repoInput = canvas.getByLabelText("Repo");
-
     await userEvent.type(ownerInput, "octocat");
-    await userEvent.type(repoInput, "hello-world");
 
     expect(args.onChange).toHaveBeenCalled();
     const lastCall =
       args.onChange.mock.calls[args.onChange.mock.calls.length - 1];
     expect(lastCall[0]).toMatchObject({
       owner: "octocat",
-      repo: "hello-world",
     });
   },
 };

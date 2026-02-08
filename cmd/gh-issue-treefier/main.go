@@ -72,7 +72,6 @@ func buildURL(port int) string {
 	}
 	q := url.Values{}
 	q.Set("owner", repo.Owner)
-	q.Set("repo", repo.Name)
 	return u + "?" + q.Encode()
 }
 

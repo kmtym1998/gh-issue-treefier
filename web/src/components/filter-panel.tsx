@@ -4,7 +4,6 @@ import type { Project, ProjectField } from "../types/project";
 
 export interface FilterValues {
   owner: string;
-  repo: string;
   state: "open" | "closed" | "all";
   projectId: string;
   fieldFilters: Record<string, string>;
@@ -17,7 +16,6 @@ export interface FilterPanelProps {
 
 const defaultFilters: FilterValues = {
   owner: "",
-  repo: "",
   state: "open",
   projectId: "",
   fieldFilters: {},
@@ -80,16 +78,6 @@ export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
             value={filters.owner}
             placeholder="owner"
             onChange={(e) => update({ owner: e.target.value })}
-          />
-        </label>
-        <label style={styles.label}>
-          Repo
-          <input
-            style={styles.input}
-            type="text"
-            value={filters.repo}
-            placeholder="repo"
-            onChange={(e) => update({ repo: e.target.value })}
           />
         </label>
         <label style={styles.label}>

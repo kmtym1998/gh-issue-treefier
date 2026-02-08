@@ -1,5 +1,8 @@
 export interface Issue {
+  id: string; // "owner/repo#number" 形式の複合 ID
   number: number;
+  owner: string;
+  repo: string;
   title: string;
   state: "open" | "closed";
   body: string;
@@ -18,8 +21,8 @@ export interface Label {
   color: string;
 }
 
-/** DAG のエッジ。source が target をブロックしている関係。 */
+/** DAG のエッジ。source が target をブロックしている関係。複合 ID (owner/repo#number) を使用。 */
 export interface Dependency {
-  source: number;
-  target: number;
+  source: string;
+  target: string;
 }

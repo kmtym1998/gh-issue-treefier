@@ -3,53 +3,86 @@ import { HttpResponse, http } from "msw";
 import { expect, userEvent, within } from "storybook/test";
 import { IssueDashboard } from "./issue-dashboard";
 
-const mockIssues = [
-  {
-    number: 1,
-    title: "Epic: Implement authentication",
-    state: "open",
-    body: "Top-level epic for auth.",
-    html_url: "https://github.com/octocat/hello-world/issues/1",
-    labels: [{ name: "epic", color: "0075ca" }],
-    assignees: [{ login: "alice", avatar_url: "https://github.com/alice.png" }],
-    sub_issues_summary: { total: 2, completed: 1, percent_completed: 50 },
+const mockProjectItems = {
+  data: {
+    node: {
+      items: {
+        pageInfo: { hasNextPage: false, endCursor: null },
+        nodes: [
+          {
+            id: "PVTI_1",
+            content: {
+              number: 1,
+              title: "Epic: Implement authentication",
+              state: "OPEN",
+              body: "Top-level epic for auth.",
+              url: "https://github.com/octocat/hello-world/issues/1",
+              repository: { owner: { login: "octocat" }, name: "hello-world" },
+              labels: { nodes: [{ name: "epic", color: "0075ca" }] },
+              assignees: {
+                nodes: [
+                  {
+                    login: "alice",
+                    avatarUrl: "https://github.com/alice.png",
+                  },
+                ],
+              },
+              subIssues: {
+                nodes: [
+                  {
+                    number: 2,
+                    repository: {
+                      owner: { login: "octocat" },
+                      name: "hello-world",
+                    },
+                  },
+                  {
+                    number: 3,
+                    repository: {
+                      owner: { login: "octocat" },
+                      name: "hello-world",
+                    },
+                  },
+                ],
+              },
+            },
+            fieldValues: { nodes: [] },
+          },
+          {
+            id: "PVTI_2",
+            content: {
+              number: 2,
+              title: "Design login page",
+              state: "CLOSED",
+              body: "",
+              url: "https://github.com/octocat/hello-world/issues/2",
+              repository: { owner: { login: "octocat" }, name: "hello-world" },
+              labels: { nodes: [{ name: "design", color: "e4e669" }] },
+              assignees: { nodes: [] },
+              subIssues: { nodes: [] },
+            },
+            fieldValues: { nodes: [] },
+          },
+          {
+            id: "PVTI_3",
+            content: {
+              number: 3,
+              title: "Implement OAuth provider",
+              state: "OPEN",
+              body: "OAuth2 integration.",
+              url: "https://github.com/octocat/hello-world/issues/3",
+              repository: { owner: { login: "octocat" }, name: "hello-world" },
+              labels: { nodes: [{ name: "backend", color: "d73a4a" }] },
+              assignees: { nodes: [] },
+              subIssues: { nodes: [] },
+            },
+            fieldValues: { nodes: [] },
+          },
+        ],
+      },
+    },
   },
-  {
-    number: 2,
-    title: "Design login page",
-    state: "closed",
-    body: "",
-    html_url: "https://github.com/octocat/hello-world/issues/2",
-    labels: [{ name: "design", color: "e4e669" }],
-    assignees: [],
-  },
-  {
-    number: 3,
-    title: "Implement OAuth provider",
-    state: "open",
-    body: "OAuth2 integration.",
-    html_url: "https://github.com/octocat/hello-world/issues/3",
-    labels: [{ name: "backend", color: "d73a4a" }],
-    assignees: [],
-  },
-];
-
-const mockSubIssues = [
-  {
-    number: 2,
-    title: "Design login page",
-    state: "closed",
-    html_url: "https://github.com/octocat/hello-world/issues/2",
-    parent: { number: 1 },
-  },
-  {
-    number: 3,
-    title: "Implement OAuth provider",
-    state: "open",
-    html_url: "https://github.com/octocat/hello-world/issues/3",
-    parent: { number: 1 },
-  },
-];
+};
 
 const mockProjects = {
   data: {
@@ -61,36 +94,72 @@ const mockProjects = {
   },
 };
 
-const handlers = [
-  http.get("/api/github/rest/repos/:owner/:repo/issues", () => {
-    return HttpResponse.json(mockIssues);
-  }),
-  http.get(
-    "/api/github/rest/repos/:owner/:repo/issues/:number/sub_issues",
-    () => {
-      return HttpResponse.json(mockSubIssues);
+const mockFields = {
+  data: {
+    node: {
+      fields: {
+        nodes: [],
+      },
     },
-  ),
-  http.post("/api/github/graphql", () => {
-    return HttpResponse.json(mockProjects);
+  },
+};
+
+const handlers = [
+  http.post("/api/github/graphql", async ({ request }) => {
+    const body = (await request.json()) as { query: string };
+    if (body.query.includes("projectsV2")) {
+      return HttpResponse.json(mockProjects);
+    }
+    if (body.query.includes("fields")) {
+      return HttpResponse.json(mockFields);
+    }
+    if (body.query.includes("items")) {
+      return HttpResponse.json(mockProjectItems);
+    }
+    return HttpResponse.json({ data: {} });
   }),
 ];
 
+const emptyItemsResponse = {
+  data: {
+    node: {
+      items: {
+        pageInfo: { hasNextPage: false, endCursor: null },
+        nodes: [],
+      },
+    },
+  },
+};
+
 const emptyHandlers = [
-  http.get("/api/github/rest/repos/:owner/:repo/issues", () => {
-    return HttpResponse.json([]);
-  }),
-  http.post("/api/github/graphql", () => {
-    return HttpResponse.json(mockProjects);
+  http.post("/api/github/graphql", async ({ request }) => {
+    const body = (await request.json()) as { query: string };
+    if (body.query.includes("projectsV2")) {
+      return HttpResponse.json(mockProjects);
+    }
+    if (body.query.includes("fields")) {
+      return HttpResponse.json(mockFields);
+    }
+    if (body.query.includes("items")) {
+      return HttpResponse.json(emptyItemsResponse);
+    }
+    return HttpResponse.json({ data: {} });
   }),
 ];
 
 const errorHandlers = [
-  http.get("/api/github/rest/repos/:owner/:repo/issues", () => {
-    return HttpResponse.json({ message: "Not Found" }, { status: 404 });
-  }),
-  http.post("/api/github/graphql", () => {
-    return HttpResponse.json(mockProjects);
+  http.post("/api/github/graphql", async ({ request }) => {
+    const body = (await request.json()) as { query: string };
+    if (body.query.includes("projectsV2")) {
+      return HttpResponse.json(mockProjects);
+    }
+    if (body.query.includes("fields")) {
+      return HttpResponse.json(mockFields);
+    }
+    if (body.query.includes("items")) {
+      return HttpResponse.json({ message: "Not Found" }, { status: 404 });
+    }
+    return HttpResponse.json({ data: {} });
   }),
 ];
 
@@ -113,12 +182,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 初期状態: Owner/Repo 未入力 */
+/** 初期状態: Owner/Project 未入力 */
 export const Initial: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     expect(
-      canvas.getByText("Owner と Repo を入力して Issue を表示"),
+      canvas.getByText("Owner を入力し Project を選択して Issue を表示"),
     ).toBeDefined();
   },
 };
@@ -129,7 +198,12 @@ export const WithIssues: Story = {
     const canvas = within(canvasElement);
 
     await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
-    await userEvent.type(canvas.getByLabelText("Repo"), "hello-world");
+
+    // Wait for projects to load and select one
+    const projectSelect = await canvas.findByLabelText("Project", undefined, {
+      timeout: 3000,
+    });
+    await userEvent.selectOptions(projectSelect, "PVT_1");
 
     // グラフが描画されるまで待機
     await expect(
@@ -149,7 +223,11 @@ export const EmptyResult: Story = {
     const canvas = within(canvasElement);
 
     await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
-    await userEvent.type(canvas.getByLabelText("Repo"), "empty-repo");
+
+    const projectSelect = await canvas.findByLabelText("Project", undefined, {
+      timeout: 3000,
+    });
+    await userEvent.selectOptions(projectSelect, "PVT_1");
 
     await expect(
       await canvas.findByText("Issue が見つかりませんでした", undefined, {
@@ -168,7 +246,11 @@ export const ErrorState: Story = {
     const canvas = within(canvasElement);
 
     await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
-    await userEvent.type(canvas.getByLabelText("Repo"), "not-found");
+
+    const projectSelect = await canvas.findByLabelText("Project", undefined, {
+      timeout: 3000,
+    });
+    await userEvent.selectOptions(projectSelect, "PVT_1");
 
     await expect(
       await canvas.findByText(/Error:/, undefined, { timeout: 3000 }),

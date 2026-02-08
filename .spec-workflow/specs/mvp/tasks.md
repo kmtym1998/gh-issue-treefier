@@ -181,9 +181,54 @@
   - _Leverage: Storybook interaction tests_
   - _Prompt: Role: React Developer | Task: IssueDetail の Story を作成。open/closed 状態、ラベルあり/なし等のバリエーションを用意。play 関数でリンクの存在を検証 | Success: 各状態で正しく表示される_
 
+## 依存関係の編集
+
+- [ ] 14. API クライアントへの restDelete 追加
+  - File: web/src/api-client/index.ts
+  - `restDelete(path)` 関数を追加
+  - Purpose: Sub-Issues API の DELETE 呼び出しに必要
+  - _Leverage: 既存の request 関数_
+  - _Prompt: Role: TypeScript Developer | Task: restGet/restPost と同様のパターンで restDelete を追加 | Success: restDelete('/repos/...') で DELETE リクエストが送れる_
+
+- [ ] 14.1. restDelete のテスト
+  - File: web/src/api-client/index.test.ts
+  - 成功時・エラー時のテスト
+  - Purpose: restDelete の信頼性確保
+  - _Leverage: vitest, 既存テストパターン_
+
+- [ ] 15. 依存関係の追加・削除フック
+  - File: web/src/hooks/use-issue-mutations.ts
+  - `addSubIssue(owner, repo, parentNumber, childNumber)` — POST /repos/:owner/:repo/issues/:number/sub_issues
+  - `removeSubIssue(owner, repo, parentNumber, childNumber)` — DELETE /repos/:owner/:repo/issues/:number/sub_issues/:sub_issue_id
+  - 成功後に依存関係データを再取得するコールバック
+  - Purpose: 依存関係の変更を GitHub API に反映
+  - _Leverage: web/src/api-client_
+
+- [ ] 15.1. 依存関係フックのテスト
+  - File: web/src/hooks/use-issue-mutations.test.ts
+  - API 呼び出しの引数検証
+  - エラーハンドリングのテスト
+  - Purpose: 変更操作の信頼性確保
+  - _Leverage: vitest_
+
+- [ ] 16. 依存関係の編集 UI
+  - File: web/src/components/issue-graph.tsx, web/src/components/issue-detail.tsx
+  - グラフ上でエッジをクリックして削除（確認ダイアログ付き）
+  - 詳細パネルに「Sub-Issue を追加」フォーム（Issue 番号入力）
+  - 操作後にグラフを自動更新
+  - Purpose: ブラウザ上での依存関係の編集
+  - _Leverage: ReactFlow の onEdgeClick, タスク 15 のフック_
+
+- [ ] 16.1. 依存関係編集 UI のテスト
+  - File: web/src/components/issue-graph.stories.tsx, web/src/components/issue-detail.stories.tsx
+  - エッジ削除のインタラクションテスト
+  - Sub-Issue 追加フォームのインタラクションテスト
+  - Purpose: 編集 UI の操作性確保
+  - _Leverage: Storybook interaction tests, MSW_
+
 ## 統合
 
-- [ ] 12. アプリケーション統合
+- [x] 12. アプリケーション統合
   - File: web/src/App.tsx
   - 各コンポーネントを組み合わせ
   - 状態の受け渡し（フィルタ → データ取得 → グラフ表示）
