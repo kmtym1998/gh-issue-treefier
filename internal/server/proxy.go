@@ -30,7 +30,7 @@ func newProxyHandlerWith(scheme, apiHost, pathPrefix, token string) *proxyHandle
 			req.URL.Host = apiHost
 			req.Host = apiHost
 			if token != "" {
-				req.Header.Set("Authorization", "token " + token)
+				req.Header.Set("Authorization", "token "+token)
 			}
 		},
 	}

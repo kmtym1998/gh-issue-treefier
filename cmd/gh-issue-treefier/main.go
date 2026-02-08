@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -9,8 +10,13 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/repository"
+	"github.com/cli/go-gh/v2/pkg/term"
+	"github.com/kmtym1998/gh-issue-treefier/internal/github"
 	"github.com/kmtym1998/gh-issue-treefier/internal/server"
+	"github.com/samber/lo"
 )
 
 func main() {
@@ -53,7 +59,10 @@ func runConsole(args []string) error {
 
 	srv := server.New(actualPort)
 
-	openURL := buildURL(actualPort)
+	openURL, err := buildURL(actualPort)
+	if err != nil {
+		return err
+	}
 	fmt.Printf("Starting server on http://localhost:%d\n", actualPort)
 
 	// Open browser
@@ -64,15 +73,56 @@ func runConsole(args []string) error {
 	return srv.Start()
 }
 
-func buildURL(port int) string {
+func buildURL(port int) (string, error) {
 	u := fmt.Sprintf("http://localhost:%d", port)
 	repo, err := repository.Current()
 	if err != nil {
-		return u
+		return u, err
 	}
 	q := url.Values{}
 	q.Set("owner", repo.Owner)
-	return u + "?" + q.Encode()
+
+	term := term.FromEnv()
+	in, ok := term.In().(*os.File)
+	if !ok {
+		return "", errors.New("failed to initialize prompter")
+	}
+	out, ok := term.Out().(*os.File)
+	if !ok {
+		return "", errors.New("failed to initialize prompter")
+	}
+	errOut, ok := term.ErrOut().(*os.File)
+	if !ok {
+		return "", errors.New("failed to initialize prompter")
+	}
+
+	gqlClient, err := api.DefaultGraphQLClient()
+	if err != nil {
+		return "", fmt.Errorf("failed to create GraphQL client: %w", err)
+	}
+	gw := github.NewProjectGateway(gqlClient)
+	projects, err := gw.ListOrgProjects(repo.Owner)
+	if err != nil {
+		return "", fmt.Errorf("failed to list projects: %w", err)
+	}
+	if len(projects) == 0 {
+		return "", fmt.Errorf("no projects found in organization %q", repo.Owner)
+	}
+	p := prompter.New(in, out, errOut)
+	selected, err := p.Select(
+		"Select a project",
+		"",
+		lo.Map(projects, func(p github.Project, _ int) string {
+			return fmt.Sprintf("#%d %s", p.Number, p.Title)
+		}),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to prompt for project: %w", err)
+	}
+	selectedProject := projects[selected]
+	q.Set("project_id", selectedProject.ID)
+
+	return u + "?" + q.Encode(), nil
 }
 
 func openBrowser(url string) error {
