@@ -6,15 +6,13 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"os/exec"
-	"runtime"
-
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/repository"
 	"github.com/cli/go-gh/v2/pkg/term"
 	"github.com/kmtym1998/gh-issue-treefier/internal/github"
 	"github.com/kmtym1998/gh-issue-treefier/internal/server"
+	"github.com/kmtym1998/gh-issue-treefier/internal/util"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
@@ -53,7 +51,7 @@ func runConsole(port int) error {
 	}
 	fmt.Printf("Starting server on http://localhost:%d\n", port)
 
-	if err := openBrowser(openURL); err != nil {
+	if err := util.OpenBrowser(openURL); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to open browser: %v\n", err)
 	}
 
@@ -112,17 +110,3 @@ func buildURL(port int) (string, error) {
 	return u + "?" + q.Encode(), nil
 }
 
-func openBrowser(url string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "linux":
-		cmd = exec.Command("xdg-open", url)
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	default:
-		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
-	}
-	return cmd.Start()
-}
