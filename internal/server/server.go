@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 )
 
@@ -15,7 +16,7 @@ func New(port int) *Server {
 	}
 }
 
-func (s *Server) Start() error {
+func (s *Server) Start(ln net.Listener) error {
 	mux := http.NewServeMux()
 
 	// GitHub API proxy
@@ -29,7 +30,5 @@ func (s *Server) Start() error {
 	// Static file serving with SPA fallback
 	mux.Handle("/", newSPAHandler())
 
-	addr := fmt.Sprintf(":%d", s.port)
-
-	return http.ListenAndServe(addr, mux)
+	return http.Serve(ln, mux)
 }

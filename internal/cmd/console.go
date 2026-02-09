@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
+
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/repository"
@@ -34,28 +37,32 @@ func newConsoleCmd() *cobra.Command {
 }
 
 func runConsole(port int) error {
-	if port == 0 {
-		listener, err := net.Listen("tcp", ":0")
-		if err != nil {
-			return fmt.Errorf("failed to find available port: %w", err)
-		}
-		port = listener.Addr().(*net.TCPAddr).Port
-		listener.Close()
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return fmt.Errorf("failed to listen: %w", err)
 	}
+	actualPort := ln.Addr().(*net.TCPAddr).Port
 
-	srv := server.New(port)
+	srv := server.New(actualPort)
 
-	openURL, err := buildURL(port)
+	openURL, err := buildURL(actualPort)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Starting server on http://localhost:%d\n", port)
+	fmt.Printf("Starting server on http://localhost:%d\n", actualPort)
 
 	if err := util.OpenBrowser(openURL); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to open browser: %v\n", err)
 	}
 
-	return srv.Start()
+	if err := srv.Start(ln); err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("server error: %w", err)
+	}
+
+	return nil
 }
 
 func buildURL(port int) (string, error) {
@@ -109,4 +116,3 @@ func buildURL(port int) (string, error) {
 
 	return u + "?" + q.Encode(), nil
 }
-
