@@ -98,12 +98,14 @@ export interface IssueGraphProps {
   issues: Issue[];
   dependencies: Dependency[];
   onNodeClick?: (issueId: string) => void;
+  onEdgeDelete?: (source: string, target: string) => void;
 }
 
 export function IssueGraph({
   issues,
   dependencies,
   onNodeClick,
+  onEdgeDelete,
 }: IssueGraphProps) {
   const rawNodes = issuesToNodes(issues);
   const rawEdges = dependenciesToEdges(dependencies);
@@ -127,6 +129,15 @@ export function IssueGraph({
     [onNodeClick],
   );
 
+  const handleEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      if (!onEdgeDelete) return;
+      if (window.confirm(`Remove dependency: ${edge.source} → ${edge.target}?`))
+        onEdgeDelete(edge.source, edge.target);
+    },
+    [onEdgeDelete],
+  );
+
   return (
     <div style={{ width: "100%", height: "100%" }}>
       <ReactFlow
@@ -135,6 +146,7 @@ export function IssueGraph({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
         fitView
         proOptions={{ hideAttribution: true }}
       >

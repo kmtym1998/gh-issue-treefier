@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { IssueDetail } from "./issue-detail";
 
 const meta = {
@@ -121,6 +121,73 @@ export const NullIssue: Story = {
     const canvas = within(canvasElement);
 
     expect(canvas.queryByText("View on GitHub")).toBeNull();
+  },
+};
+
+export const WithAddSubIssueForm: Story = {
+  args: {
+    issue: {
+      id: "owner/repo#42",
+      number: 42,
+      owner: "owner",
+      repo: "repo",
+      title: "Parent issue",
+      state: "open",
+      body: "",
+      labels: [],
+      assignees: [],
+      url: "https://github.com/owner/repo/issues/42",
+    },
+    onAddSubIssue: fn(() => Promise.resolve()),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+
+    // Form should be visible
+    expect(canvas.getByText("Add Sub-Issue")).toBeDefined();
+
+    // Submit button should be disabled when input is empty
+    const submitButton = canvas.getByText("Add");
+    expect(submitButton).toBeDisabled();
+
+    // Type an issue number
+    const input = canvas.getByPlaceholderText("Issue #");
+    await userEvent.type(input, "10");
+
+    // Submit button should now be enabled
+    expect(submitButton).not.toBeDisabled();
+
+    // Submit the form
+    await userEvent.click(submitButton);
+
+    // Callback should have been called
+    expect(args.onAddSubIssue).toHaveBeenCalledWith("owner", "repo", 42, 10);
+
+    // Input should be cleared after successful submission
+    expect(input).toHaveValue("");
+  },
+};
+
+export const WithoutAddSubIssueForm: Story = {
+  args: {
+    issue: {
+      id: "owner/repo#42",
+      number: 42,
+      owner: "owner",
+      repo: "repo",
+      title: "Read-only issue",
+      state: "open",
+      body: "",
+      labels: [],
+      assignees: [],
+      url: "https://github.com/owner/repo/issues/42",
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Form should NOT be visible when onAddSubIssue is not provided
+    expect(canvas.queryByText("Add Sub-Issue")).toBeNull();
   },
 };
 

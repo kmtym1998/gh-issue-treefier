@@ -183,20 +183,20 @@
 
 ## 依存関係の編集
 
-- [ ] 14. API クライアントへの restDelete 追加
+- [x] 14. API クライアントへの restDelete 追加
   - File: web/src/api-client/index.ts
   - `restDelete(path)` 関数を追加
   - Purpose: Sub-Issues API の DELETE 呼び出しに必要
   - _Leverage: 既存の request 関数_
   - _Prompt: Role: TypeScript Developer | Task: restGet/restPost と同様のパターンで restDelete を追加 | Success: restDelete('/repos/...') で DELETE リクエストが送れる_
 
-- [ ] 14.1. restDelete のテスト
+- [x] 14.1. restDelete のテスト
   - File: web/src/api-client/index.test.ts
   - 成功時・エラー時のテスト
   - Purpose: restDelete の信頼性確保
   - _Leverage: vitest, 既存テストパターン_
 
-- [ ] 15. 依存関係の追加・削除フック
+- [x] 15. 依存関係の追加・削除フック
   - File: web/src/hooks/use-issue-mutations.ts
   - `addSubIssue(owner, repo, parentNumber, childNumber)` — POST /repos/:owner/:repo/issues/:number/sub_issues
   - `removeSubIssue(owner, repo, parentNumber, childNumber)` — DELETE /repos/:owner/:repo/issues/:number/sub_issues/:sub_issue_id
@@ -204,14 +204,14 @@
   - Purpose: 依存関係の変更を GitHub API に反映
   - _Leverage: web/src/api-client_
 
-- [ ] 15.1. 依存関係フックのテスト
+- [x] 15.1. 依存関係フックのテスト
   - File: web/src/hooks/use-issue-mutations.test.ts
   - API 呼び出しの引数検証
   - エラーハンドリングのテスト
   - Purpose: 変更操作の信頼性確保
   - _Leverage: vitest_
 
-- [ ] 16. 依存関係の編集 UI
+- [x] 16. 依存関係の編集 UI
   - File: web/src/components/issue-graph.tsx, web/src/components/issue-detail.tsx
   - グラフ上でエッジをクリックして削除（確認ダイアログ付き）
   - 詳細パネルに「Sub-Issue を追加」フォーム（Issue 番号入力）
@@ -219,7 +219,7 @@
   - Purpose: ブラウザ上での依存関係の編集
   - _Leverage: ReactFlow の onEdgeClick, タスク 15 のフック_
 
-- [ ] 16.1. 依存関係編集 UI のテスト
+- [x] 16.1. 依存関係編集 UI のテスト
   - File: web/src/components/issue-graph.stories.tsx, web/src/components/issue-detail.stories.tsx
   - エッジ削除のインタラクションテスト
   - Sub-Issue 追加フォームのインタラクションテスト
@@ -237,7 +237,7 @@
   - _Requirements: 全て_
   - _Prompt: Role: React Developer | Task: App.tsx で全コンポーネントを統合。フィルタ変更 → useIssues 再取得 → グラフ更新 の流れを実装 | Restrictions: 状態管理はシンプルに useState で | Success: フィルタ変更からグラフ表示まで一連の流れが動作_
 
-- [ ] 13. ビルド設定とバイナリ統合
+- [x] 13. ビルド設定とバイナリ統合
   - File: Makefile, web/vite.config.ts
   - フロントエンドビルド → Go embed → バイナリ生成の流れ
   - 開発時のホットリロード設定
@@ -245,7 +245,7 @@
   - _Requirements: 全て_
   - _Prompt: Role: DevOps | Task: make build で web ビルド → go build の一連の流れ。make dev で vite dev server + go run の並列起動 | Restrictions: CI でも動くようにする | Success: make build で単一バイナリが生成される_
 
-- [ ] 13.1. テスト実行の自動化
+- [x] 13.1. テスト実行の自動化
   - File: Makefile, .github/workflows/test.yml
   - `make test` で Go テスト、vitest、Storybook テストを一括実行
   - CI での自動テスト設定

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { APIError, graphql, restGet, restPost } from "./index";
+import { APIError, graphql, restDelete, restGet, restPost } from "./index";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -61,6 +61,34 @@ describe("restPost", () => {
     expect(url).toBe("/api/github/rest/repos/owner/repo/issues");
     expect(options.method).toBe("POST");
     expect(JSON.parse(options.body)).toEqual({ title: "new issue" });
+  });
+});
+
+describe("restDelete", () => {
+  it("sends DELETE request and returns JSON", async () => {
+    const data = { message: "deleted" };
+    mockFetch.mockResolvedValue(jsonResponse(data));
+
+    const result = await restDelete("repos/owner/repo/issues/1/sub_issues/123");
+
+    expect(result).toEqual(data);
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe(
+      "/api/github/rest/repos/owner/repo/issues/1/sub_issues/123",
+    );
+    expect(options.method).toBe("DELETE");
+  });
+
+  it("throws APIError on 404", async () => {
+    const body = { message: "Not Found" };
+    mockFetch.mockResolvedValue(jsonResponse(body, 404, "Not Found"));
+
+    const err = await catchAPIError(
+      restDelete("repos/owner/repo/issues/1/sub_issues/999"),
+    );
+
+    expect(err.status).toBe(404);
+    expect(err.body).toEqual(body);
   });
 });
 

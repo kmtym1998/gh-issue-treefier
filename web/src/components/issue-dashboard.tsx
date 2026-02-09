@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useIssueMutations } from "../hooks/use-issue-mutations";
 import { useProjectIssues } from "../hooks/use-project-issues";
 import { FilterPanel, type FilterValues } from "./filter-panel";
 import { IssueDetail } from "./issue-detail";
@@ -29,11 +30,33 @@ export function IssueDashboard() {
     setSelectedIssueId(null);
   }, []);
 
-  const { issues, dependencies, loading, error } = useProjectIssues({
+  const { issues, dependencies, loading, error, refetch } = useProjectIssues({
     projectId: filters.projectId,
     state: filters.state,
     fieldFilters: filters.fieldFilters,
   });
+
+  const mutations = useIssueMutations(refetch);
+
+  const handleEdgeDelete = useCallback(
+    (source: string, target: string) => {
+      // source/target は "owner/repo#number" 形式
+      const parseId = (id: string) => {
+        const [ownerRepo, num] = id.split("#");
+        const [owner, repo] = ownerRepo.split("/");
+        return { owner, repo, number: Number.parseInt(num, 10) };
+      };
+      const parent = parseId(source);
+      const child = parseId(target);
+      mutations.removeSubIssue(
+        parent.owner,
+        parent.repo,
+        parent.number,
+        child.number,
+      );
+    },
+    [mutations],
+  );
 
   const selectedIssue = useMemo(
     () => issues.find((i) => i.id === selectedIssueId) ?? null,
@@ -69,6 +92,7 @@ export function IssueDashboard() {
               issues={issues}
               dependencies={dependencies}
               onNodeClick={setSelectedIssueId}
+              onEdgeDelete={handleEdgeDelete}
             />
           )}
         </div>
@@ -76,6 +100,7 @@ export function IssueDashboard() {
         <IssueDetail
           issue={selectedIssue}
           onClose={() => setSelectedIssueId(null)}
+          onAddSubIssue={mutations.addSubIssue}
         />
       </div>
     </div>

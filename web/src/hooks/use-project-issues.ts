@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { graphql } from "../api-client";
 import type { GitHubProjectV2Item } from "../types/github";
 import type { Dependency, Issue } from "../types/issue";
@@ -14,6 +14,7 @@ export interface UseProjectIssuesResult {
   dependencies: Dependency[];
   loading: boolean;
   error: Error | null;
+  refetch: () => void;
 }
 
 const PROJECT_ITEMS_QUERY = `
@@ -166,7 +167,11 @@ export function useProjectIssues(
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [refetchKey, setRefetchKey] = useState(0);
 
+  const refetch = useCallback(() => setRefetchKey((k) => k + 1), []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetchKey is an intentional trigger for manual refetch
   useEffect(() => {
     if (!options.projectId) return;
 
@@ -234,7 +239,7 @@ export function useProjectIssues(
     return () => {
       cancelled = true;
     };
-  }, [options.projectId, options.state, options.fieldFilters]);
+  }, [options.projectId, options.state, options.fieldFilters, refetchKey]);
 
-  return { issues, dependencies, loading, error };
+  return { issues, dependencies, loading, error, refetch };
 }

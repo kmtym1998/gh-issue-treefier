@@ -1,10 +1,10 @@
-.PHONY: build dev dev-web dev-go clean dashboard lint fmt test
+.PHONY: build dev dev-web dev-go clean dashboard lint fmt test test-go test-web test-storybook
 
 # ビルド
 build: build-web embed-dist build-go
 
 build-web:
-	cd web && npm run build
+	cd web && npm ci && npm run build
 
 embed-dist:
 	rm -rf internal/server/dist
@@ -13,7 +13,10 @@ embed-dist:
 build-go:
 	go build -o gh-issue-treefier ./cmd/gh-issue-treefier
 
-# 開発
+# 開発（フロント + Go を並列起動）
+dev:
+	$(MAKE) dev-web & $(MAKE) dev-go & wait
+
 dev-web:
 	cd web && npm run dev
 
@@ -29,9 +32,16 @@ fmt:
 	cd web && npx biome check --write .
 
 # テスト
-test:
+test: test-go test-web test-storybook
+
+test-go:
 	go test ./...
+
+test-web:
 	cd web && npm test
+
+test-storybook:
+	cd web && npm run test:storybook
 
 # クリーンアップ
 clean:

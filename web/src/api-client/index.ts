@@ -41,6 +41,12 @@ export function restPost<T = unknown>(path: string, body: unknown): Promise<T> {
   });
 }
 
+export function restDelete<T = unknown>(path: string): Promise<T> {
+  return request<T>(`/api/github/rest/${path}`, {
+    method: "DELETE",
+  });
+}
+
 export function graphql<T = unknown>(
   query: string,
   variables?: Record<string, unknown>,
