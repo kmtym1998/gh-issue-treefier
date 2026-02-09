@@ -8,8 +8,13 @@ import { IssueGraph } from "./issue-graph";
 function getQueryParams(): Partial<FilterValues> {
   const params = new URLSearchParams(window.location.search);
   const result: Partial<FilterValues> = {};
+
   const owner = params.get("owner");
   if (owner) result.owner = owner;
+
+  const projectId = params.get("project_id");
+  if (projectId) result.projectId = projectId;
+
   return result;
 }
 
