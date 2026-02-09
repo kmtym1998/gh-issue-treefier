@@ -22,6 +22,8 @@ dev-web:
 
 dev-go:
 	go run ./cmd/gh-issue-treefier console
+	gh extensions remove gh-issue-treefier || true
+	gh extension install .
 
 # リント・フォーマット
 lint:
