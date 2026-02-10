@@ -34,6 +34,12 @@ const PROJECT_ITEMS_QUERY = `
                 subIssues(first: 50) {
                   nodes { number repository { owner { login } name } }
                 }
+                blockedBy(first: 50) {
+                  nodes { number repository { owner { login } name } }
+                }
+                blocking(first: 50) {
+                  nodes { number repository { owner { login } name } }
+                }
               }
             }
             fieldValues(first: 20) {
@@ -118,24 +124,52 @@ export function parseProjectItems(items: GitHubProjectV2Item[]): Issue[] {
 }
 
 /**
- * GraphQL ProjectV2 Items から subIssues を使って依存関係を構築する。
+ * GraphQL ProjectV2 Items から subIssues / blockedBy / blocking を使って依存関係を構築する。
+ * blockedBy / blocking は双方向からパースし、重複は Set で排除する。
  */
 export function parseProjectDependencies(
   items: GitHubProjectV2Item[],
 ): Dependency[] {
   const deps: Dependency[] = [];
+  const seen = new Set<string>();
+
   for (const item of items) {
     if (!isIssueContent(item.content)) continue;
     const c = item.content;
-    const parentOwner = c.repository.owner.login;
-    const parentRepo = c.repository.name;
-    const parentId = buildIssueId(parentOwner, parentRepo, c.number);
+    const currentOwner = c.repository.owner.login;
+    const currentRepo = c.repository.name;
+    const currentId = buildIssueId(currentOwner, currentRepo, c.number);
 
+    // Sub-Issues: parent → child
     for (const sub of c.subIssues.nodes) {
       const childOwner = sub.repository.owner.login;
       const childRepo = sub.repository.name;
       const childId = buildIssueId(childOwner, childRepo, sub.number);
-      deps.push({ source: parentId, target: childId });
+      deps.push({ source: currentId, target: childId, type: "sub_issue" });
+    }
+
+    // blockedBy: blocker(source) → blocked(target=current)
+    for (const blocker of c.blockedBy.nodes) {
+      const blockerOwner = blocker.repository.owner.login;
+      const blockerRepo = blocker.repository.name;
+      const blockerId = buildIssueId(blockerOwner, blockerRepo, blocker.number);
+      const key = `blocked_by:${blockerId}-${currentId}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deps.push({ source: blockerId, target: currentId, type: "blocked_by" });
+      }
+    }
+
+    // blocking: current(source) → blocked(target)
+    for (const blocked of c.blocking.nodes) {
+      const blockedOwner = blocked.repository.owner.login;
+      const blockedRepo = blocked.repository.name;
+      const blockedId = buildIssueId(blockedOwner, blockedRepo, blocked.number);
+      const key = `blocked_by:${currentId}-${blockedId}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deps.push({ source: currentId, target: blockedId, type: "blocked_by" });
+      }
     }
   }
   return deps;

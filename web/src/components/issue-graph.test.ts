@@ -42,8 +42,8 @@ const sampleIssues: Issue[] = [
 ];
 
 const sampleDependencies: Dependency[] = [
-  { source: "owner/repo#1", target: "owner/repo#2" },
-  { source: "owner/repo#1", target: "owner/repo#3" },
+  { source: "owner/repo#1", target: "owner/repo#2", type: "sub_issue" },
+  { source: "owner/repo#1", target: "owner/repo#3", type: "sub_issue" },
 ];
 
 describe("issuesToNodes", () => {
@@ -52,9 +52,12 @@ describe("issuesToNodes", () => {
 
     expect(nodes).toHaveLength(3);
     expect(nodes[0].id).toBe("owner/repo#1");
+    expect(nodes[0].type).toBe("issue");
     expect(nodes[0].data.label).toBe("#1 Parent issue");
     expect(nodes[1].id).toBe("owner/repo#2");
+    expect(nodes[1].type).toBe("issue");
     expect(nodes[2].id).toBe("owner/repo#3");
+    expect(nodes[2].type).toBe("issue");
   });
 
   it("includes repo name in label for multi-repo issues", () => {
@@ -94,7 +97,7 @@ describe("issuesToNodes", () => {
   it("applies open state style", () => {
     const nodes = issuesToNodes([sampleIssues[0]]);
 
-    expect(nodes[0].style).toMatchObject({
+    expect(nodes[0].data.style).toMatchObject({
       background: "#dafbe1",
     });
   });
@@ -102,7 +105,7 @@ describe("issuesToNodes", () => {
   it("applies closed state style", () => {
     const nodes = issuesToNodes([sampleIssues[1]]);
 
-    expect(nodes[0].style).toMatchObject({
+    expect(nodes[0].data.style).toMatchObject({
       background: "#f0e6ff",
     });
   });
@@ -113,21 +116,45 @@ describe("issuesToNodes", () => {
 });
 
 describe("dependenciesToEdges", () => {
-  it("converts dependencies to ReactFlow edges", () => {
+  it("converts sub_issue dependencies to solid grey edges", () => {
     const edges = dependenciesToEdges(sampleDependencies);
 
     expect(edges).toHaveLength(2);
     expect(edges[0]).toEqual({
-      id: "eowner/repo#1-owner/repo#2",
+      id: "e:sub_issue:owner/repo#1-owner/repo#2",
       source: "owner/repo#1",
       target: "owner/repo#2",
       animated: false,
+      data: { type: "sub_issue" },
+      style: { stroke: "#656d76" },
+      markerEnd: { type: "arrowclosed", color: "#656d76" },
     });
     expect(edges[1]).toEqual({
-      id: "eowner/repo#1-owner/repo#3",
+      id: "e:sub_issue:owner/repo#1-owner/repo#3",
       source: "owner/repo#1",
       target: "owner/repo#3",
       animated: false,
+      data: { type: "sub_issue" },
+      style: { stroke: "#656d76" },
+      markerEnd: { type: "arrowclosed", color: "#656d76" },
+    });
+  });
+
+  it("converts blocked_by dependencies to dashed red edges", () => {
+    const blockedByDeps: Dependency[] = [
+      { source: "owner/repo#1", target: "owner/repo#2", type: "blocked_by" },
+    ];
+    const edges = dependenciesToEdges(blockedByDeps);
+
+    expect(edges).toHaveLength(1);
+    expect(edges[0]).toEqual({
+      id: "e:blocked_by:owner/repo#1-owner/repo#2",
+      source: "owner/repo#1",
+      target: "owner/repo#2",
+      animated: false,
+      data: { type: "blocked_by" },
+      style: { stroke: "#cf222e", strokeDasharray: "5 3" },
+      markerEnd: { type: "arrowclosed", color: "#cf222e" },
     });
   });
 

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { addSubIssue, removeSubIssue } from "./use-issue-mutations";
+import {
+  addBlockedBy,
+  addSubIssue,
+  removeBlockedBy,
+  removeSubIssue,
+} from "./use-issue-mutations";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -77,5 +82,95 @@ describe("removeSubIssue", () => {
 
     await expect(removeSubIssue("owner", "repo", 10, 999)).rejects.toThrow();
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("addBlockedBy", () => {
+  it("fetches node IDs for both issues then calls GraphQL mutation", async () => {
+    // 1st & 2nd calls: GET node_ids (parallel)
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 100, node_id: "I_issue1" }),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 200, node_id: "I_blocker1" }),
+    );
+    // 3rd call: GraphQL mutation
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ data: { addBlockedBy: { issue: { id: "I_issue1" } } } }),
+    );
+
+    await addBlockedBy("owner", "repo", 5, 3);
+
+    // Verify GET requests for both issues (parallel, order may vary)
+    const restCalls = mockFetch.mock.calls.slice(0, 2).map((c) => c[0]);
+    expect(restCalls).toContain("/api/github/rest/repos/owner/repo/issues/5");
+    expect(restCalls).toContain("/api/github/rest/repos/owner/repo/issues/3");
+
+    // Verify GraphQL mutation
+    const [url, options] = mockFetch.mock.calls[2];
+    expect(url).toBe("/api/github/graphql");
+    expect(options.method).toBe("POST");
+    const body = JSON.parse(options.body);
+    expect(body.variables).toEqual({
+      issueId: "I_issue1",
+      blockedByIssueId: "I_blocker1",
+    });
+  });
+
+  it("throws when issue lookup fails", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ message: "Not Found" }, 404, "Not Found"),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 200, node_id: "I_blocker1" }),
+    );
+
+    await expect(addBlockedBy("owner", "repo", 999, 3)).rejects.toThrow();
+  });
+});
+
+describe("removeBlockedBy", () => {
+  it("fetches node IDs for both issues then calls GraphQL mutation", async () => {
+    // 1st & 2nd calls: GET node_ids (parallel)
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 100, node_id: "I_issue1" }),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 200, node_id: "I_blocker1" }),
+    );
+    // 3rd call: GraphQL mutation
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: { removeBlockedBy: { issue: { id: "I_issue1" } } },
+      }),
+    );
+
+    await removeBlockedBy("owner", "repo", 5, 3);
+
+    // Verify GET requests for both issues
+    const restCalls = mockFetch.mock.calls.slice(0, 2).map((c) => c[0]);
+    expect(restCalls).toContain("/api/github/rest/repos/owner/repo/issues/5");
+    expect(restCalls).toContain("/api/github/rest/repos/owner/repo/issues/3");
+
+    // Verify GraphQL mutation
+    const [url, options] = mockFetch.mock.calls[2];
+    expect(url).toBe("/api/github/graphql");
+    expect(options.method).toBe("POST");
+    const body = JSON.parse(options.body);
+    expect(body.variables).toEqual({
+      issueId: "I_issue1",
+      blockedByIssueId: "I_blocker1",
+    });
+  });
+
+  it("throws when issue lookup fails", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ message: "Not Found" }, 404, "Not Found"),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 200, node_id: "I_blocker1" }),
+    );
+
+    await expect(removeBlockedBy("owner", "repo", 999, 3)).rejects.toThrow();
   });
 });

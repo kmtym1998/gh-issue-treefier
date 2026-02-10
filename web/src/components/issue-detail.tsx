@@ -10,14 +10,22 @@ export interface IssueDetailProps {
     parentNumber: number,
     childNumber: number,
   ) => Promise<void>;
+  onAddBlockedBy?: (
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    blockerNumber: number,
+  ) => Promise<void>;
 }
 
 export function IssueDetail({
   issue,
   onClose,
   onAddSubIssue,
+  onAddBlockedBy,
 }: IssueDetailProps) {
   const [childNumber, setChildNumber] = useState("");
+  const [blockerNumber, setBlockerNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -44,6 +52,31 @@ export function IssueDetail({
       }
     },
     [issue, onAddSubIssue, childNumber],
+  );
+
+  const handleAddBlockedBy = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      if (!issue || !onAddBlockedBy || !blockerNumber.trim()) return;
+
+      const num = Number.parseInt(blockerNumber.trim(), 10);
+      if (Number.isNaN(num) || num <= 0) {
+        setFormError("Invalid issue number");
+        return;
+      }
+
+      setSubmitting(true);
+      setFormError(null);
+      try {
+        await onAddBlockedBy(issue.owner, issue.repo, issue.number, num);
+        setBlockerNumber("");
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : "Failed to add");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [issue, onAddBlockedBy, blockerNumber],
   );
 
   if (!issue) return null;
@@ -122,6 +155,33 @@ export function IssueDetail({
               type="submit"
               style={styles.submitButton}
               disabled={submitting || !childNumber.trim()}
+            >
+              {submitting ? "..." : "Add"}
+            </button>
+          </div>
+          {formError && <p style={styles.formError}>{formError}</p>}
+        </form>
+      )}
+
+      {onAddBlockedBy && (
+        <form onSubmit={handleAddBlockedBy} style={styles.form}>
+          <label style={styles.formLabel} htmlFor="blocked-by-input">
+            Add Blocked By
+          </label>
+          <div style={styles.formRow}>
+            <input
+              id="blocked-by-input"
+              type="text"
+              placeholder="Issue #"
+              value={blockerNumber}
+              onChange={(e) => setBlockerNumber(e.target.value)}
+              style={styles.input}
+              disabled={submitting}
+            />
+            <button
+              type="submit"
+              style={styles.blockedByButton}
+              disabled={submitting || !blockerNumber.trim()}
             >
               {submitting ? "..." : "Add"}
             </button>
@@ -267,6 +327,15 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "4px 10px",
     fontSize: 12,
     background: "#2da44e",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  blockedByButton: {
+    padding: "4px 10px",
+    fontSize: 12,
+    background: "#cf222e",
     color: "#fff",
     border: "none",
     borderRadius: 4,

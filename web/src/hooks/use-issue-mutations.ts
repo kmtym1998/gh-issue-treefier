@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
-import { restDelete, restGet, restPost } from "../api-client";
+import { graphql, restDelete, restGet, restPost } from "../api-client";
 
 interface GitHubIssue {
   id: number;
+  node_id: string;
 }
 
 /**
@@ -18,6 +19,36 @@ async function fetchIssueId(
   );
   return issue.id;
 }
+
+/**
+ * Issue 番号から GraphQL 用の node_id を取得する。
+ */
+async function fetchIssueNodeId(
+  owner: string,
+  repo: string,
+  number: number,
+): Promise<string> {
+  const issue = await restGet<GitHubIssue>(
+    `repos/${owner}/${repo}/issues/${number}`,
+  );
+  return issue.node_id;
+}
+
+const ADD_BLOCKED_BY_MUTATION = `
+  mutation($issueId: ID!, $blockedByIssueId: ID!) {
+    addBlockedBy(input: { issueId: $issueId, blockedByIssueId: $blockedByIssueId }) {
+      issue { id }
+    }
+  }
+`;
+
+const REMOVE_BLOCKED_BY_MUTATION = `
+  mutation($issueId: ID!, $blockedByIssueId: ID!) {
+    removeBlockedBy(input: { issueId: $issueId, blockedByIssueId: $blockedByIssueId }) {
+      issue { id }
+    }
+  }
+`;
 
 /**
  * Sub-Issue を追加する。
@@ -51,6 +82,46 @@ export async function removeSubIssue(
   );
 }
 
+/**
+ * BlockedBy 関係を追加する。
+ * issueNumber がブロックされている側、blockerNumber がブロックしている側。
+ */
+export async function addBlockedBy(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  blockerNumber: number,
+): Promise<void> {
+  const [issueNodeId, blockerNodeId] = await Promise.all([
+    fetchIssueNodeId(owner, repo, issueNumber),
+    fetchIssueNodeId(owner, repo, blockerNumber),
+  ]);
+  await graphql(ADD_BLOCKED_BY_MUTATION, {
+    issueId: issueNodeId,
+    blockedByIssueId: blockerNodeId,
+  });
+}
+
+/**
+ * BlockedBy 関係を削除する。
+ * issueNumber がブロックされている側、blockerNumber がブロックしている側。
+ */
+export async function removeBlockedBy(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  blockerNumber: number,
+): Promise<void> {
+  const [issueNodeId, blockerNodeId] = await Promise.all([
+    fetchIssueNodeId(owner, repo, issueNumber),
+    fetchIssueNodeId(owner, repo, blockerNumber),
+  ]);
+  await graphql(REMOVE_BLOCKED_BY_MUTATION, {
+    issueId: issueNodeId,
+    blockedByIssueId: blockerNodeId,
+  });
+}
+
 export interface UseIssueMutationsResult {
   addSubIssue: (
     owner: string,
@@ -63,6 +134,18 @@ export interface UseIssueMutationsResult {
     repo: string,
     parentNumber: number,
     childNumber: number,
+  ) => Promise<void>;
+  addBlockedBy: (
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    blockerNumber: number,
+  ) => Promise<void>;
+  removeBlockedBy: (
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    blockerNumber: number,
   ) => Promise<void>;
   loading: boolean;
   error: Error | null;
@@ -107,5 +190,24 @@ export function useIssueMutations(
     [wrap],
   );
 
-  return { addSubIssue: add, removeSubIssue: remove, loading, error };
+  const addBlocked = useCallback(
+    (owner: string, repo: string, issueNumber: number, blockerNumber: number) =>
+      wrap(() => addBlockedBy(owner, repo, issueNumber, blockerNumber)),
+    [wrap],
+  );
+
+  const removeBlocked = useCallback(
+    (owner: string, repo: string, issueNumber: number, blockerNumber: number) =>
+      wrap(() => removeBlockedBy(owner, repo, issueNumber, blockerNumber)),
+    [wrap],
+  );
+
+  return {
+    addSubIssue: add,
+    removeSubIssue: remove,
+    addBlockedBy: addBlocked,
+    removeBlockedBy: removeBlocked,
+    loading,
+    error,
+  };
 }

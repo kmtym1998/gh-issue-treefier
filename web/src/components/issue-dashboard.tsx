@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useIssueMutations } from "../hooks/use-issue-mutations";
 import { useProjectIssues } from "../hooks/use-project-issues";
+import type { DependencyType } from "../types/issue";
 import { FilterPanel, type FilterValues } from "./filter-panel";
 import { IssueDetail } from "./issue-detail";
 import { IssueGraph } from "./issue-graph";
@@ -44,21 +45,65 @@ export function IssueDashboard() {
   const mutations = useIssueMutations(refetch);
 
   const handleEdgeDelete = useCallback(
-    (source: string, target: string) => {
+    (source: string, target: string, type: DependencyType) => {
       // source/target は "owner/repo#number" 形式
       const parseId = (id: string) => {
         const [ownerRepo, num] = id.split("#");
         const [owner, repo] = ownerRepo.split("/");
         return { owner, repo, number: Number.parseInt(num, 10) };
       };
-      const parent = parseId(source);
-      const child = parseId(target);
-      mutations.removeSubIssue(
-        parent.owner,
-        parent.repo,
-        parent.number,
-        child.number,
-      );
+
+      if (type === "blocked_by") {
+        // source=blocker, target=blocked
+        const blocker = parseId(source);
+        const blocked = parseId(target);
+        mutations.removeBlockedBy(
+          blocked.owner,
+          blocked.repo,
+          blocked.number,
+          blocker.number,
+        );
+      } else {
+        const parent = parseId(source);
+        const child = parseId(target);
+        mutations.removeSubIssue(
+          parent.owner,
+          parent.repo,
+          parent.number,
+          child.number,
+        );
+      }
+    },
+    [mutations],
+  );
+
+  const handleEdgeAdd = useCallback(
+    (source: string, target: string, type: DependencyType) => {
+      const parseId = (id: string) => {
+        const [ownerRepo, num] = id.split("#");
+        const [owner, repo] = ownerRepo.split("/");
+        return { owner, repo, number: Number.parseInt(num, 10) };
+      };
+
+      if (type === "blocked_by") {
+        const blocker = parseId(source);
+        const blocked = parseId(target);
+        mutations.addBlockedBy(
+          blocked.owner,
+          blocked.repo,
+          blocked.number,
+          blocker.number,
+        );
+      } else {
+        const parent = parseId(source);
+        const child = parseId(target);
+        mutations.addSubIssue(
+          parent.owner,
+          parent.repo,
+          parent.number,
+          child.number,
+        );
+      }
     },
     [mutations],
   );
@@ -98,6 +143,7 @@ export function IssueDashboard() {
               dependencies={dependencies}
               onNodeClick={setSelectedIssueId}
               onEdgeDelete={handleEdgeDelete}
+              onEdgeAdd={handleEdgeAdd}
             />
           )}
         </div>
@@ -106,6 +152,7 @@ export function IssueDashboard() {
           issue={selectedIssue}
           onClose={() => setSelectedIssueId(null)}
           onAddSubIssue={mutations.addSubIssue}
+          onAddBlockedBy={mutations.addBlockedBy}
         />
       </div>
     </div>

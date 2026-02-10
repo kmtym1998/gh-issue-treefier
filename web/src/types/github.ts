@@ -23,6 +23,18 @@ export interface GitHubProjectV2Item {
         repository: { owner: { login: string }; name: string };
       }>;
     };
+    blockedBy: {
+      nodes: Array<{
+        number: number;
+        repository: { owner: { login: string }; name: string };
+      }>;
+    };
+    blocking: {
+      nodes: Array<{
+        number: number;
+        repository: { owner: { login: string }; name: string };
+      }>;
+    };
   } | null;
   fieldValues: {
     nodes: Array<{

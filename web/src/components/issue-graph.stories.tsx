@@ -1,10 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
 import type { Dependency, Issue } from "../types/issue";
 import { IssueGraph } from "./issue-graph";
 
 const meta = {
   title: "Components/IssueGraph",
   component: IssueGraph,
+  args: {
+    onEdgeAdd: fn(),
+  },
   decorators: [
     (Story) => (
       <div style={{ width: "800px", height: "500px" }}>
@@ -81,11 +85,11 @@ const issues: Issue[] = [
 ];
 
 const dependencies: Dependency[] = [
-  { source: "owner/repo#1", target: "owner/repo#2" },
-  { source: "owner/repo#1", target: "owner/repo#3" },
-  { source: "owner/repo#1", target: "owner/repo#4" },
-  { source: "owner/repo#3", target: "owner/repo#5" },
-  { source: "owner/repo#4", target: "owner/repo#5" },
+  { source: "owner/repo#1", target: "owner/repo#2", type: "sub_issue" },
+  { source: "owner/repo#1", target: "owner/repo#3", type: "sub_issue" },
+  { source: "owner/repo#1", target: "owner/repo#4", type: "sub_issue" },
+  { source: "owner/repo#3", target: "owner/repo#5", type: "blocked_by" },
+  { source: "owner/repo#4", target: "owner/repo#5", type: "blocked_by" },
 ];
 
 export const Default: Story = {
@@ -168,9 +172,9 @@ const multiRepoIssues: Issue[] = [
 ];
 
 const multiRepoDeps: Dependency[] = [
-  { source: "org/frontend#1", target: "org/frontend#5" },
-  { source: "org/frontend#1", target: "org/backend#10" },
-  { source: "org/backend#10", target: "org/infra#3" },
+  { source: "org/frontend#1", target: "org/frontend#5", type: "sub_issue" },
+  { source: "org/frontend#1", target: "org/backend#10", type: "sub_issue" },
+  { source: "org/backend#10", target: "org/infra#3", type: "blocked_by" },
 ];
 
 export const MultiRepo: Story = {

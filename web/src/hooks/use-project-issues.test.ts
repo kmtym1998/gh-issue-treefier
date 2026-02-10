@@ -18,6 +18,8 @@ const defaultContent: ItemContent = {
   labels: { nodes: [] },
   assignees: { nodes: [] },
   subIssues: { nodes: [] },
+  blockedBy: { nodes: [] },
+  blocking: { nodes: [] },
 };
 
 const makeItem = (
@@ -152,8 +154,8 @@ describe("parseProjectDependencies", () => {
     const result = parseProjectDependencies(items);
 
     expect(result).toEqual([
-      { source: "owner/repo#1", target: "owner/repo#10" },
-      { source: "owner/repo#1", target: "owner/repo#11" },
+      { source: "owner/repo#1", target: "owner/repo#10", type: "sub_issue" },
+      { source: "owner/repo#1", target: "owner/repo#11", type: "sub_issue" },
     ]);
   });
 
@@ -178,7 +180,7 @@ describe("parseProjectDependencies", () => {
     const result = parseProjectDependencies(items);
 
     expect(result).toEqual([
-      { source: "org/frontend#1", target: "org/backend#5" },
+      { source: "org/frontend#1", target: "org/backend#5", type: "sub_issue" },
     ]);
   });
 
@@ -200,5 +202,105 @@ describe("parseProjectDependencies", () => {
 
   it("returns empty array for empty input", () => {
     expect(parseProjectDependencies([])).toEqual([]);
+  });
+
+  it("builds blocked_by edges from blockedBy field", () => {
+    const items: GitHubProjectV2Item[] = [
+      makeItem({
+        content: {
+          number: 5,
+          repository: { owner: { login: "owner" }, name: "repo" },
+          subIssues: { nodes: [] },
+          blockedBy: {
+            nodes: [
+              {
+                number: 3,
+                repository: { owner: { login: "owner" }, name: "repo" },
+              },
+            ],
+          },
+          blocking: { nodes: [] },
+        },
+      }),
+    ];
+
+    const result = parseProjectDependencies(items);
+
+    expect(result).toEqual([
+      { source: "owner/repo#3", target: "owner/repo#5", type: "blocked_by" },
+    ]);
+  });
+
+  it("builds blocked_by edges from blocking field", () => {
+    const items: GitHubProjectV2Item[] = [
+      makeItem({
+        content: {
+          number: 3,
+          repository: { owner: { login: "owner" }, name: "repo" },
+          subIssues: { nodes: [] },
+          blockedBy: { nodes: [] },
+          blocking: {
+            nodes: [
+              {
+                number: 5,
+                repository: { owner: { login: "owner" }, name: "repo" },
+              },
+            ],
+          },
+        },
+      }),
+    ];
+
+    const result = parseProjectDependencies(items);
+
+    expect(result).toEqual([
+      { source: "owner/repo#3", target: "owner/repo#5", type: "blocked_by" },
+    ]);
+  });
+
+  it("deduplicates blocked_by edges from both blockedBy and blocking", () => {
+    const items: GitHubProjectV2Item[] = [
+      makeItem({
+        id: "PVTI_1",
+        content: {
+          number: 5,
+          repository: { owner: { login: "owner" }, name: "repo" },
+          subIssues: { nodes: [] },
+          blockedBy: {
+            nodes: [
+              {
+                number: 3,
+                repository: { owner: { login: "owner" }, name: "repo" },
+              },
+            ],
+          },
+          blocking: { nodes: [] },
+        },
+      }),
+      makeItem({
+        id: "PVTI_2",
+        content: {
+          number: 3,
+          repository: { owner: { login: "owner" }, name: "repo" },
+          subIssues: { nodes: [] },
+          blockedBy: { nodes: [] },
+          blocking: {
+            nodes: [
+              {
+                number: 5,
+                repository: { owner: { login: "owner" }, name: "repo" },
+              },
+            ],
+          },
+        },
+      }),
+    ];
+
+    const result = parseProjectDependencies(items);
+
+    const blockedByEdges = result.filter((d) => d.type === "blocked_by");
+    expect(blockedByEdges).toEqual([
+      { source: "owner/repo#3", target: "owner/repo#5", type: "blocked_by" },
+    ]);
   });
 });

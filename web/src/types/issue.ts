@@ -21,8 +21,11 @@ export interface Label {
   color: string;
 }
 
+export type DependencyType = "sub_issue" | "blocked_by";
+
 /** DAG のエッジ。source が target をブロックしている関係。複合 ID (owner/repo#number) を使用。 */
 export interface Dependency {
   source: string;
   target: string;
+  type: DependencyType;
 }
