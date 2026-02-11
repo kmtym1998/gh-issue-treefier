@@ -31,9 +31,9 @@ func (m *mockGQLClient) Do(query string, variables map[string]interface{}, respo
 	return json.Unmarshal(r.body, response)
 }
 
-func TestListOrgProjects_SinglePage(t *testing.T) {
+func TestListRepoProjects_SinglePage(t *testing.T) {
 	body := []byte(`{
-		"organization": {
+		"repository": {
 			"projectsV2": {
 				"nodes": [
 					{"id": "PVT_1", "title": "Project Alpha", "number": 1},
@@ -51,7 +51,7 @@ func TestListOrgProjects_SinglePage(t *testing.T) {
 	}
 	gw := NewProjectGateway(client)
 
-	projects, err := gw.ListOrgProjects("my-org")
+	projects, err := gw.ListRepoProjects("my-org", "my-repo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -67,9 +67,9 @@ func TestListOrgProjects_SinglePage(t *testing.T) {
 	}
 }
 
-func TestListOrgProjects_Pagination(t *testing.T) {
+func TestListRepoProjects_Pagination(t *testing.T) {
 	page1 := []byte(`{
-		"organization": {
+		"repository": {
 			"projectsV2": {
 				"nodes": [
 					{"id": "PVT_1", "title": "Project 1", "number": 1}
@@ -79,7 +79,7 @@ func TestListOrgProjects_Pagination(t *testing.T) {
 		}
 	}`)
 	page2 := []byte(`{
-		"organization": {
+		"repository": {
 			"projectsV2": {
 				"nodes": [
 					{"id": "PVT_2", "title": "Project 2", "number": 2}
@@ -97,7 +97,7 @@ func TestListOrgProjects_Pagination(t *testing.T) {
 	}
 	gw := NewProjectGateway(client)
 
-	projects, err := gw.ListOrgProjects("my-org")
+	projects, err := gw.ListRepoProjects("my-org", "my-repo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -113,9 +113,9 @@ func TestListOrgProjects_Pagination(t *testing.T) {
 	}
 }
 
-func TestListOrgProjects_Empty(t *testing.T) {
+func TestListRepoProjects_Empty(t *testing.T) {
 	body := []byte(`{
-		"organization": {
+		"repository": {
 			"projectsV2": {
 				"nodes": [],
 				"pageInfo": {"hasNextPage": false, "endCursor": ""}
@@ -130,7 +130,7 @@ func TestListOrgProjects_Empty(t *testing.T) {
 	}
 	gw := NewProjectGateway(client)
 
-	projects, err := gw.ListOrgProjects("empty-org")
+	projects, err := gw.ListRepoProjects("empty-org", "empty-repo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -140,15 +140,15 @@ func TestListOrgProjects_Empty(t *testing.T) {
 	}
 }
 
-func TestListOrgProjects_Error(t *testing.T) {
+func TestListRepoProjects_Error(t *testing.T) {
 	client := &mockGQLClient{
 		responses: []mockResponse{
-			{err: fmt.Errorf("GraphQL error: could not resolve to an Organization")},
+			{err: fmt.Errorf("GraphQL error: could not resolve to a Repository")},
 		},
 	}
 	gw := NewProjectGateway(client)
 
-	_, err := gw.ListOrgProjects("bad-org")
+	_, err := gw.ListRepoProjects("bad-org", "bad-repo")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

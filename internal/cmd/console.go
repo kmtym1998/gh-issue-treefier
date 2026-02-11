@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/prompter"
@@ -21,22 +22,30 @@ import (
 )
 
 func newConsoleCmd() *cobra.Command {
-	var port int
-
 	cmd := &cobra.Command{
 		Use:   "console",
 		Short: "Start the web console",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runConsole(port)
+			return runConsole(cmd, args)
 		},
 	}
 
-	cmd.Flags().IntVar(&port, "port", 0, "Port to listen on (0 for auto)")
+	cmd.Flags().Int("port", 0, "Port to listen on (0 for auto)")
+	cmd.Flags().StringP("repo", "R", "", "Repository in OWNER/REPO format")
 
 	return cmd
 }
 
-func runConsole(port int) error {
+func runConsole(cmd *cobra.Command, _ []string) error {
+	port, err := cmd.Flags().GetInt("port")
+	if err != nil {
+		return fmt.Errorf("failed to read port flag: %w", err)
+	}
+	repoOverride, err := cmd.Flags().GetString("repo")
+	if err != nil {
+		return fmt.Errorf("failed to read repo flag: %w", err)
+	}
+
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
@@ -45,7 +54,12 @@ func runConsole(port int) error {
 
 	srv := server.New(actualPort)
 
-	openURL, err := buildURL(actualPort)
+	repo, err := resolveRepo(repoOverride)
+	if err != nil {
+		return err
+	}
+
+	openURL, err := buildURL(actualPort, repo)
 	if err != nil {
 		return err
 	}
@@ -65,12 +79,19 @@ func runConsole(port int) error {
 	return nil
 }
 
-func buildURL(port int) (string, error) {
-	u := fmt.Sprintf("http://localhost:%d", port)
-	repo, err := repository.Current()
-	if err != nil {
-		return u, err
+func resolveRepo(repoOverride string) (repository.Repository, error) {
+	if repoOverride == "" {
+		return repository.Current()
 	}
+	parts := strings.Split(repoOverride, "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return repository.Repository{}, fmt.Errorf("invalid repo %q, expected OWNER/REPO", repoOverride)
+	}
+	return repository.Repository{Owner: parts[0], Name: parts[1]}, nil
+}
+
+func buildURL(port int, repo repository.Repository) (string, error) {
+	u := fmt.Sprintf("http://localhost:%d", port)
 	q := url.Values{}
 	q.Set("owner", repo.Owner)
 
@@ -93,12 +114,12 @@ func buildURL(port int) (string, error) {
 		return "", fmt.Errorf("failed to create GraphQL client: %w", err)
 	}
 	gw := github.NewProjectGateway(gqlClient)
-	projects, err := gw.ListOrgProjects(repo.Owner)
+	projects, err := gw.ListRepoProjects(repo.Owner, repo.Name)
 	if err != nil {
 		return "", fmt.Errorf("failed to list projects: %w", err)
 	}
 	if len(projects) == 0 {
-		return "", fmt.Errorf("no projects found in organization %q", repo.Owner)
+		return "", fmt.Errorf("no projects found in repository %s/%s", repo.Owner, repo.Name)
 	}
 	p := prompter.New(in, out, errOut)
 	selected, err := p.Select(

@@ -26,9 +26,9 @@ func NewProjectGateway(client GQLClient) *ProjectGateway {
 	return &ProjectGateway{client: client}
 }
 
-// ListOrgProjects fetches all ProjectV2 projects for the given organization
+// ListRepoProjects fetches all ProjectV2 projects for the given repository
 // using the GitHub GraphQL API via gh CLI authentication.
-func (pg *ProjectGateway) ListOrgProjects(org string) ([]Project, error) {
+func (pg *ProjectGateway) ListRepoProjects(owner, name string) ([]Project, error) {
 	var projects []Project
 	var endCursor string
 	hasNextPage := true
@@ -36,13 +36,14 @@ func (pg *ProjectGateway) ListOrgProjects(org string) ([]Project, error) {
 	for hasNextPage {
 		var query string
 		variables := map[string]interface{}{
-			"owner": org,
+			"owner": owner,
+			"name":  name,
 			"first": 100,
 		}
 		if endCursor != "" {
 			query = `
-				query($owner: String!, $first: Int!, $after: String!) {
-					organization(login: $owner) {
+				query($owner: String!, $name: String!, $first: Int!, $after: String!) {
+					repository(owner: $owner, name: $name) {
 						projectsV2(first: $first, after: $after) {
 							nodes { id title number }
 							pageInfo { hasNextPage endCursor }
@@ -53,8 +54,8 @@ func (pg *ProjectGateway) ListOrgProjects(org string) ([]Project, error) {
 			variables["after"] = endCursor
 		} else {
 			query = `
-				query($owner: String!, $first: Int!) {
-					organization(login: $owner) {
+				query($owner: String!, $name: String!, $first: Int!) {
+					repository(owner: $owner, name: $name) {
 						projectsV2(first: $first) {
 							nodes { id title number }
 							pageInfo { hasNextPage endCursor }
@@ -65,7 +66,7 @@ func (pg *ProjectGateway) ListOrgProjects(org string) ([]Project, error) {
 		}
 
 		var resp struct {
-			Organization struct {
+			Repository struct {
 				ProjectsV2 struct {
 					Nodes    []Project `json:"nodes"`
 					PageInfo struct {
@@ -73,16 +74,16 @@ func (pg *ProjectGateway) ListOrgProjects(org string) ([]Project, error) {
 						EndCursor   string `json:"endCursor"`
 					} `json:"pageInfo"`
 				} `json:"projectsV2"`
-			} `json:"organization"`
+			} `json:"repository"`
 		}
 
 		if err := pg.client.Do(query, variables, &resp); err != nil {
-			return nil, fmt.Errorf("failed to query projects for org %q: %w", org, err)
+			return nil, fmt.Errorf("failed to query projects for repo %s/%s: %w", owner, name, err)
 		}
 
-		projects = append(projects, resp.Organization.ProjectsV2.Nodes...)
-		hasNextPage = resp.Organization.ProjectsV2.PageInfo.HasNextPage
-		endCursor = resp.Organization.ProjectsV2.PageInfo.EndCursor
+		projects = append(projects, resp.Repository.ProjectsV2.Nodes...)
+		hasNextPage = resp.Repository.ProjectsV2.PageInfo.HasNextPage
+		endCursor = resp.Repository.ProjectsV2.PageInfo.EndCursor
 	}
 
 	return projects, nil
