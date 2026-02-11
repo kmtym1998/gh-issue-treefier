@@ -26,7 +26,15 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     throw new APIError(response.status, response.statusText, body);
   }
 
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  if (text === "") {
+    return undefined as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as T;
+  }
 }
 
 export function restGet<T = unknown>(path: string): Promise<T> {

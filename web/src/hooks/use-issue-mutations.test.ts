@@ -54,25 +54,31 @@ describe("addSubIssue", () => {
 });
 
 describe("removeSubIssue", () => {
-  it("fetches child issue ID then DELETEs from sub_issues endpoint", async () => {
-    // 1st call: GET child issue to resolve ID
-    mockFetch.mockResolvedValueOnce(jsonResponse({ id: 42 }));
-    // 2nd call: DELETE sub-issue
-    mockFetch.mockResolvedValueOnce(jsonResponse({}, 200, "OK"));
+  it("fetches node IDs for both issues then calls GraphQL mutation", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 100, node_id: "I_parent" }),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 200, node_id: "I_child" }),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ data: { removeSubIssue: { issue: { id: "I_parent" } } } }),
+    );
 
     await removeSubIssue("owner", "repo", 10, 20);
 
-    // Verify GET request for child issue
-    expect(mockFetch.mock.calls[0][0]).toBe(
-      "/api/github/rest/repos/owner/repo/issues/20",
-    );
+    const restCalls = mockFetch.mock.calls.slice(0, 2).map((c) => c[0]);
+    expect(restCalls).toContain("/api/github/rest/repos/owner/repo/issues/10");
+    expect(restCalls).toContain("/api/github/rest/repos/owner/repo/issues/20");
 
-    // Verify DELETE request
-    const [url, options] = mockFetch.mock.calls[1];
-    expect(url).toBe(
-      "/api/github/rest/repos/owner/repo/issues/10/sub_issues/42",
-    );
-    expect(options.method).toBe("DELETE");
+    const [url, options] = mockFetch.mock.calls[2];
+    expect(url).toBe("/api/github/graphql");
+    expect(options.method).toBe("POST");
+    const body = JSON.parse(options.body);
+    expect(body.variables).toEqual({
+      issueId: "I_parent",
+      subIssueId: "I_child",
+    });
   });
 
   it("throws when child issue lookup fails", async () => {

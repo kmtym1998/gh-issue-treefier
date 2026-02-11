@@ -79,6 +79,16 @@ describe("restDelete", () => {
     expect(options.method).toBe("DELETE");
   });
 
+  it("returns undefined for 204 No Content", async () => {
+    mockFetch.mockResolvedValue(
+      new Response("", { status: 204, statusText: "No Content" }),
+    );
+
+    const result = await restDelete("repos/owner/repo/issues/1/sub_issues/123");
+
+    expect(result).toBeUndefined();
+  });
+
   it("throws APIError on 404", async () => {
     const body = { message: "Not Found" };
     mockFetch.mockResolvedValue(jsonResponse(body, 404, "Not Found"));

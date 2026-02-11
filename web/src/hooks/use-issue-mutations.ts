@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { graphql, restDelete, restGet, restPost } from "../api-client";
+import { graphql, restGet, restPost } from "../api-client";
 
 interface GitHubIssue {
   id: number;
@@ -50,6 +50,14 @@ const REMOVE_BLOCKED_BY_MUTATION = `
   }
 `;
 
+const REMOVE_SUB_ISSUE_MUTATION = `
+  mutation($issueId: ID!, $subIssueId: ID!) {
+    removeSubIssue(input: { issueId: $issueId, subIssueId: $subIssueId }) {
+      issue { id }
+    }
+  }
+`;
+
 /**
  * Sub-Issue を追加する。
  * POST /repos/{owner}/{repo}/issues/{parent_number}/sub_issues
@@ -76,10 +84,14 @@ export async function removeSubIssue(
   parentNumber: number,
   childNumber: number,
 ): Promise<void> {
-  const childId = await fetchIssueId(owner, repo, childNumber);
-  await restDelete(
-    `repos/${owner}/${repo}/issues/${parentNumber}/sub_issues/${childId}`,
-  );
+  const [issueNodeId, subIssueNodeId] = await Promise.all([
+    fetchIssueNodeId(owner, repo, parentNumber),
+    fetchIssueNodeId(owner, repo, childNumber),
+  ]);
+  await graphql(REMOVE_SUB_ISSUE_MUTATION, {
+    issueId: issueNodeId,
+    subIssueId: subIssueNodeId,
+  });
 }
 
 /**
