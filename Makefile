@@ -2,6 +2,8 @@
 
 # ビルド
 build: build-web embed-dist build-go
+	gh extensions remove gh-issue-treefier || true
+	gh extension install .
 
 build-web:
 	cd web && npm ci && npm run build
@@ -22,8 +24,6 @@ dev-web:
 
 dev-go:
 	go run ./cmd/gh-issue-treefier console
-	gh extensions remove gh-issue-treefier || true
-	gh extension install .
 
 # リント・フォーマット
 lint:
