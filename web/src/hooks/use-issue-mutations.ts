@@ -35,16 +35,16 @@ async function fetchIssueNodeId(
 }
 
 const ADD_BLOCKED_BY_MUTATION = `
-  mutation($issueId: ID!, $blockedByIssueId: ID!) {
-    addBlockedBy(input: { issueId: $issueId, blockedByIssueId: $blockedByIssueId }) {
+  mutation($issueId: ID!, $blockingIssueId: ID!) {
+    addBlockedBy(input: { issueId: $issueId, blockingIssueId: $blockingIssueId }) {
       issue { id }
     }
   }
 `;
 
 const REMOVE_BLOCKED_BY_MUTATION = `
-  mutation($issueId: ID!, $blockedByIssueId: ID!) {
-    removeBlockedBy(input: { issueId: $issueId, blockedByIssueId: $blockedByIssueId }) {
+  mutation($issueId: ID!, $blockingIssueId: ID!) {
+    removeBlockedBy(input: { issueId: $issueId, blockingIssueId: $blockingIssueId }) {
       issue { id }
     }
   }
@@ -110,7 +110,7 @@ export async function addBlockedBy(
   ]);
   await graphql(ADD_BLOCKED_BY_MUTATION, {
     issueId: issueNodeId,
-    blockedByIssueId: blockerNodeId,
+    blockingIssueId: blockerNodeId,
   });
 }
 
@@ -130,7 +130,7 @@ export async function removeBlockedBy(
   ]);
   await graphql(REMOVE_BLOCKED_BY_MUTATION, {
     issueId: issueNodeId,
-    blockedByIssueId: blockerNodeId,
+    blockingIssueId: blockerNodeId,
   });
 }
 

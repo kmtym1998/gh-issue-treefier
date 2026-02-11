@@ -119,7 +119,7 @@ describe("addBlockedBy", () => {
     const body = JSON.parse(options.body);
     expect(body.variables).toEqual({
       issueId: "I_issue1",
-      blockedByIssueId: "I_blocker1",
+      blockingIssueId: "I_blocker1",
     });
   });
 
@@ -165,7 +165,7 @@ describe("removeBlockedBy", () => {
     const body = JSON.parse(options.body);
     expect(body.variables).toEqual({
       issueId: "I_issue1",
-      blockedByIssueId: "I_blocker1",
+      blockingIssueId: "I_blocker1",
     });
   });
 
