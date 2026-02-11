@@ -6,24 +6,35 @@
 
 ```
 gh-issue-treefier/
-├── cmd/                    # CLI エントリーポイント
+├── cmd/                        # CLI エントリーポイント
 │   └── gh-issue-treefier/
 │       └── main.go
-├── internal/               # 非公開パッケージ
-│   └── server/             # HTTP サーバー (静的ファイル配信 + GitHub API プロキシ)
-├── web/                    # フロントエンド (React)
+├── internal/                   # 非公開パッケージ
+│   ├── cmd/                    # CLI コマンド定義 (root, console)
+│   ├── github/                 # GitHub API ゲートウェイ (ProjectV2 取得等)
+│   ├── server/                 # HTTP サーバー (静的ファイル配信 + GitHub API プロキシ)
+│   │   └── dist/               # フロントエンドビルド成果物 (embed 対象, ビルド時にコピー)
+│   └── util/                   # ユーティリティ (ブラウザ起動等)
+├── web/                        # フロントエンド (React + TypeScript)
+│   ├── .storybook/             # Storybook 設定
+│   ├── public/                 # 静的アセット
 │   ├── src/
-│   │   ├── api-client/     # GitHub API クライアント
-│   │   ├── components/     # React コンポーネント
-│   │   ├── hooks/          # カスタムフック
-│   │   ├── types/          # TypeScript 型定義
-│   │   └── App.tsx
+│   │   ├── api-client/         # GitHub API クライアント (REST + GraphQL)
+│   │   ├── components/         # React コンポーネント
+│   │   ├── hooks/              # カスタムフック (issues, projects, mutations)
+│   │   ├── types/              # TypeScript 型定義 (issue, project, github)
+│   │   ├── App.tsx             # ルートコンポーネント
+│   │   └── main.tsx            # エントリーポイント
+│   ├── dist/                   # Vite ビルド出力
 │   ├── package.json
 │   └── vite.config.ts
-├── dist/                   # フロントエンドビルド成果物 (embed 対象)
+├── .spec-workflow/             # 仕様駆動開発ドキュメント
+│   ├── steering/               # ステアリングドキュメント
+│   └── specs/                  # 仕様・設計・タスク
 ├── go.mod
 ├── go.sum
-└── Makefile
+├── Makefile
+└── AGENTS.md
 ```
 
 ## 設計原則
@@ -42,7 +53,10 @@ flowchart TD
     end
 
     subgraph Backend
+        cmd["internal/cmd"]
         server["internal/server"]
+        ghGateway["internal/github"]
+        util["internal/util"]
     end
 
     subgraph Frontend
@@ -50,13 +64,19 @@ flowchart TD
         apiClient["web/src/api-client"]
         components["web/src/components"]
         hooks["web/src/hooks"]
+        types["web/src/types"]
     end
 
-    main --> server
+    main --> cmd
+    cmd --> server
+    cmd --> ghGateway
+    cmd --> util
+    server -->|embed| Frontend
     App --> components
-    App --> hooks
-    hooks --> apiClient
     components --> hooks
+    hooks --> apiClient
+    hooks --> types
+    apiClient -->|/api/github/*| server
 ```
 
 ## 命名規則
