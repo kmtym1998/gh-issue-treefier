@@ -107,6 +107,9 @@ export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
             onChange={handleProjectChange}
           />
         </label>
+      </div>
+
+      <div style={styles.row}>
         {fieldsLoading && <span style={styles.hint}>Loading fields...</span>}
         {fields.map((field) => (
           <FieldFilter

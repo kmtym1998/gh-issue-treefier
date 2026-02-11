@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFilterQueryParams } from "../hooks/use-filter-query-params";
 import { useIssueMutations } from "../hooks/use-issue-mutations";
 import { buildIssueId, useProjectIssues } from "../hooks/use-project-issues";
 import type { Dependency, DependencyType } from "../types/issue";
@@ -6,42 +7,31 @@ import { FilterPanel, type FilterValues } from "./filter-panel";
 import { IssueDetail } from "./issue-detail";
 import { IssueGraph } from "./issue-graph";
 
-function getQueryParams(): Partial<FilterValues> {
-  const params = new URLSearchParams(window.location.search);
-  const result: Partial<FilterValues> = {};
-
-  const owner = params.get("owner");
-  if (owner) result.owner = owner;
-
-  const projectId = params.get("project_id");
-  if (projectId) result.projectId = projectId;
-
-  return result;
-}
-
 export function IssueDashboard() {
-  const queryParams = useMemo(() => getQueryParams(), []);
+  const { initialFilters, syncToUrl } = useFilterQueryParams();
 
   const [filters, setFilters] = useState<FilterValues>({
     owner: "",
     state: "open",
     projectId: "",
     fieldFilters: {},
-    ...queryParams,
+    ...initialFilters,
   });
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [graphDependencies, setGraphDependencies] = useState<Dependency[]>([]);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
-  const handleFilterChange = useCallback((next: FilterValues) => {
-    setFilters(next);
-    setSelectedIssueId(null);
-  }, []);
+  const handleFilterChange = useCallback(
+    (next: FilterValues) => {
+      setFilters(next);
+      setSelectedIssueId(null);
+      syncToUrl(next);
+    },
+    [syncToUrl],
+  );
 
   const { issues, dependencies, loading, error } = useProjectIssues({
-    projectId: filters.projectId,
-    state: filters.state,
-    fieldFilters: filters.fieldFilters,
+    ...filters,
   });
 
   const mutations = useIssueMutations();
@@ -229,7 +219,10 @@ export function IssueDashboard() {
 
   return (
     <div style={styles.root}>
-      <FilterPanel defaultValues={queryParams} onChange={handleFilterChange} />
+      <FilterPanel
+        defaultValues={initialFilters}
+        onChange={handleFilterChange}
+      />
 
       <div style={styles.main}>
         <div style={styles.graphArea}>
