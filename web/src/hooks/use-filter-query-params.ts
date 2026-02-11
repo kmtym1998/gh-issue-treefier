@@ -68,7 +68,9 @@ export function useFilterQueryParams() {
   const syncToUrl = useCallback((filters: FilterValues) => {
     const params = buildQueryParams(filters);
     const qs = params.toString();
-    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    const url = qs
+      ? `${window.location.pathname}?${qs}`
+      : window.location.pathname;
     window.history.replaceState(null, "", url);
   }, []);
 

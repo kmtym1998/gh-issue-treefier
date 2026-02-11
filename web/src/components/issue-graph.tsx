@@ -8,11 +8,10 @@ import {
   type NodeProps,
   Position,
   ReactFlow,
-  useEdgesState,
   useNodesState,
 } from "@xyflow/react";
 import dagre from "dagre";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Dependency, DependencyType, Issue } from "../types/issue";
 
 import "@xyflow/react/dist/style.css";
@@ -137,7 +136,21 @@ export interface IssueGraphProps {
   onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
 }
 
-export function IssueGraph({
+export function IssueGraph(props: IssueGraphProps) {
+  // issue の集合が変わったときだけリマウントし、dagre レイアウトを再計算する
+  const issueKey = useMemo(
+    () =>
+      props.issues
+        .map((i) => i.id)
+        .sort()
+        .join(","),
+    [props.issues],
+  );
+
+  return <IssueGraphInner key={issueKey} {...props} />;
+}
+
+function IssueGraphInner({
   issues,
   dependencies,
   onNodeClick,
@@ -147,20 +160,20 @@ export function IssueGraph({
   const [connectionMode, setConnectionMode] =
     useState<DependencyType>("sub_issue");
 
-  const rawNodes = issuesToNodes(issues);
-  const rawEdges = dependenciesToEdges(dependencies);
-  const layouted = layoutNodes(rawNodes, rawEdges);
+  // マウント時に一度だけ dagre レイアウトを計算（key 変更でリマウントされる）
+  const [initialNodes] = useState(() => {
+    const nodes = issuesToNodes(issues);
+    const edges = dependenciesToEdges(dependencies);
+    return layoutNodes(nodes, edges);
+  });
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(layouted);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(rawEdges);
+  const [nodes, , onNodesChange] = useNodesState(initialNodes);
 
-  useEffect(() => {
-    const newNodes = issuesToNodes(issues);
-    const newEdges = dependenciesToEdges(dependencies);
-    const newLayouted = layoutNodes(newNodes, newEdges);
-    setNodes(newLayouted);
-    setEdges(newEdges);
-  }, [issues, dependencies, setNodes, setEdges]);
+  // エッジは dependencies から純粋に導出
+  const edges = useMemo(
+    () => dependenciesToEdges(dependencies),
+    [dependencies],
+  );
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -229,7 +242,6 @@ export function IssueGraph({
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         onConnect={handleConnect}
