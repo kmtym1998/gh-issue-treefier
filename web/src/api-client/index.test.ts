@@ -80,9 +80,12 @@ describe("restDelete", () => {
   });
 
   it("returns undefined for 204 No Content", async () => {
-    mockFetch.mockResolvedValue(
-      new Response("", { status: 204, statusText: "No Content" }),
-    );
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 204,
+      statusText: "No Content",
+      text: async () => "",
+    });
 
     const result = await restDelete("repos/owner/repo/issues/1/sub_issues/123");
 

@@ -83,11 +83,14 @@ describe("removeSubIssue", () => {
 
   it("throws when child issue lookup fails", async () => {
     mockFetch.mockResolvedValueOnce(
+      jsonResponse({ id: 100, node_id: "I_parent" }),
+    );
+    mockFetch.mockResolvedValueOnce(
       jsonResponse({ message: "Not Found" }, 404, "Not Found"),
     );
 
     await expect(removeSubIssue("owner", "repo", 10, 999)).rejects.toThrow();
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
 
