@@ -32,6 +32,7 @@ func newConsoleCmd() *cobra.Command {
 
 	cmd.Flags().Int("port", 0, "Port to listen on (0 for auto)")
 	cmd.Flags().StringP("repo", "R", "", "Repository in OWNER/REPO format")
+	cmd.Flags().Bool("no-browser", false, "Do not open the browser automatically")
 
 	return cmd
 }
@@ -44,6 +45,10 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 	repoOverride, err := cmd.Flags().GetString("repo")
 	if err != nil {
 		return fmt.Errorf("failed to read repo flag: %w", err)
+	}
+	noBrowser, err := cmd.Flags().GetBool("no-browser")
+	if err != nil {
+		return fmt.Errorf("failed to read no-browser flag: %w", err)
 	}
 
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
@@ -65,8 +70,10 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 	}
 	fmt.Printf("Starting server on http://localhost:%d\n", actualPort)
 
-	if err := util.OpenBrowser(openURL); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: failed to open browser: %v\n", err)
+	if !noBrowser {
+		if err := util.OpenBrowser(openURL); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to open browser: %v\n", err)
+		}
 	}
 
 	if err := srv.Start(ln); err != nil {
