@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { graphql } from "../api-client";
+import { getCachedItems, setCachedItems } from "../lib/idb-cache";
 import type { GitHubProjectV2Item } from "../types/github";
 import type { Dependency, Issue } from "../types/issue";
 
@@ -13,6 +14,7 @@ export interface UseProjectIssuesResult {
   issues: Issue[];
   dependencies: Dependency[];
   loading: boolean;
+  isRevalidating: boolean;
   error: Error | null;
   refetch: () => void;
 }
@@ -178,7 +180,7 @@ export function parseProjectDependencies(
 /**
  * field フィルタに一致するか判定する。
  */
-function matchesFieldFilters(
+export function matchesFieldFilters(
   item: GitHubProjectV2Item,
   fieldFilters: Record<string, string>,
 ): boolean {
@@ -194,70 +196,74 @@ function matchesFieldFilters(
   return true;
 }
 
+async function fetchAllItems(projectId: string): Promise<GitHubProjectV2Item[]> {
+  const allItems: GitHubProjectV2Item[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const res: ProjectItemsGraphQLResponse =
+      await graphql<ProjectItemsGraphQLResponse>(PROJECT_ITEMS_QUERY, {
+        projectId,
+        cursor,
+      });
+    const page = res.data.node.items;
+    allItems.push(...page.nodes);
+    cursor = page.pageInfo.endCursor;
+    hasNextPage = page.pageInfo.hasNextPage;
+  }
+
+  return allItems;
+}
+
 export function useProjectIssues(
   options: UseProjectIssuesOptions,
 ): UseProjectIssuesResult {
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [dependencies, setDependencies] = useState<Dependency[]>([]);
+  const [rawItems, setRawItems] = useState<GitHubProjectV2Item[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isRevalidating, setIsRevalidating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [refetchKey, setRefetchKey] = useState(0);
+  const forceRefetchRef = useRef(false);
 
-  const refetch = useCallback(() => setRefetchKey((k) => k + 1), []);
+  const refetch = useCallback(() => {
+    forceRefetchRef.current = true;
+    setRefetchKey((k) => k + 1);
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetchKey is an intentional trigger for manual refetch
   useEffect(() => {
     if (!options.projectId) return;
 
     let cancelled = false;
+    const forceRefetch = forceRefetchRef.current;
+    forceRefetchRef.current = false;
 
     async function fetchData() {
-      setLoading(true);
       setError(null);
 
       try {
-        // ページネーション付きで全 Item を取得
-        const allItems: GitHubProjectV2Item[] = [];
-        let cursor: string | null = null;
-
-        let hasNextPage = true;
-        while (hasNextPage) {
-          if (cancelled) return;
-          const res: ProjectItemsGraphQLResponse =
-            await graphql<ProjectItemsGraphQLResponse>(PROJECT_ITEMS_QUERY, {
-              projectId: options.projectId,
-              cursor,
-            });
-          const page = res.data.node.items;
-          allItems.push(...page.nodes);
-          cursor = page.pageInfo.endCursor;
-          hasNextPage = page.pageInfo.hasNextPage;
+        // キャッシュからの読み込み（強制リフェッチ時はスキップ）
+        if (!forceRefetch) {
+          const cached = await getCachedItems(options.projectId);
+          if (cached) {
+            if (!cancelled) {
+              setRawItems(cached.items);
+              setIsRevalidating(true);
+            }
+          } else {
+            if (!cancelled) setLoading(true);
+          }
+        } else {
+          if (!cancelled) setLoading(true);
         }
 
+        // API からフェッチ
+        const items = await fetchAllItems(options.projectId);
         if (cancelled) return;
 
-        // field フィルタを適用
-        const ff = options.fieldFilters;
-        const filtered =
-          ff && Object.keys(ff).length > 0
-            ? allItems.filter((item) => matchesFieldFilters(item, ff))
-            : allItems;
-
-        // Issue に変換
-        let parsed = parseProjectItems(filtered);
-
-        // state フィルタをクライアントサイドで適用
-        if (options.state && options.state !== "all") {
-          parsed = parsed.filter((i) => i.state === options.state);
-        }
-
-        // 依存関係は全 Item (フィルタ前) から構築
-        const allDeps = parseProjectDependencies(allItems);
-
-        if (!cancelled) {
-          setIssues(parsed);
-          setDependencies(allDeps);
-        }
+        setRawItems(items);
+        await setCachedItems(options.projectId, items);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error(String(err)));
@@ -265,6 +271,7 @@ export function useProjectIssues(
       } finally {
         if (!cancelled) {
           setLoading(false);
+          setIsRevalidating(false);
         }
       }
     }
@@ -273,7 +280,30 @@ export function useProjectIssues(
     return () => {
       cancelled = true;
     };
-  }, [options.projectId, options.state, options.fieldFilters, refetchKey]);
+  }, [options.projectId, refetchKey]);
 
-  return { issues, dependencies, loading, error, refetch };
+  // フィルタ適用は useMemo で rawItems から導出
+  const issues = useMemo(() => {
+    const ff = options.fieldFilters;
+    const filtered =
+      ff && Object.keys(ff).length > 0
+        ? rawItems.filter((item) => matchesFieldFilters(item, ff))
+        : rawItems;
+
+    let parsed = parseProjectItems(filtered);
+
+    if (options.state && options.state !== "all") {
+      parsed = parsed.filter((i) => i.state === options.state);
+    }
+
+    return parsed;
+  }, [rawItems, options.state, options.fieldFilters]);
+
+  // 依存関係は全 rawItems から導出
+  const dependencies = useMemo(
+    () => parseProjectDependencies(rawItems),
+    [rawItems],
+  );
+
+  return { issues, dependencies, loading, isRevalidating, error, refetch };
 }

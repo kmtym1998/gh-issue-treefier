@@ -34,7 +34,7 @@
   - _Requirements: テスト戦略 - ユニットテスト_
   - _Prompt: Implement the task for spec indexeddb-issue-cache, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer | Task: `web/src/lib/idb-cache.test.ts` を新規作成する。`fake-indexeddb/auto` を import して IndexedDB をポリフィルし、`getCachedItems` / `setCachedItems` / `invalidateCache` / `clearAllCache` の各関数をテストする。 | Restrictions: 各テストケース間で DB 状態が干渉しないようにする。`vi.useFakeTimers()` は使わない（タイムスタンプの正確性はテスト対象外）。既存のテストパターン（`web/src/hooks/use-project-issues.test.ts`）に倣う。 | Success: `npm test` で全テストケースがパスする。get/set ラウンドトリップ、存在しないキーで null、invalidateCache 後に null、clearAllCache 後に全エントリが削除されることを確認。 | After completing implementation, mark this task as [-] in tasks.md, log implementation with log-implementation tool, then mark as [x] when done._
 
-- [ ] 5. `useProjectIssues` フックに SWR キャッシュとフィルタ分離を実装する
+- [x] 5. `useProjectIssues` フックに SWR キャッシュとフィルタ分離を実装する
   - File: `web/src/hooks/use-project-issues.ts`
   - 内部状態を `issues` / `dependencies` から `rawItems`（`GitHubProjectV2Item[]`）に変更する
   - `useEffect` の依存配列から `state` / `fieldFilters` を除外し、`projectId` と `refetchKey` のみにする
@@ -46,7 +46,7 @@
   - _Requirements: 即時表示、バックグラウンド更新、手動リフレッシュ_
   - _Prompt: Implement the task for spec indexeddb-issue-cache, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer | Task: `web/src/hooks/use-project-issues.ts` を SWR パターンに改修する。(1) 内部状態を `rawItems: GitHubProjectV2Item[]` に変更。(2) `useEffect` の deps を `[projectId, refetchKey]` のみにする。(3) useEffect 内で `getCachedItems` → キャッシュヒットなら `setRawItems` → 常に API フェッチ → `setRawItems` + `setCachedItems`。(4) `issues` を `useMemo([rawItems, state, fieldFilters])` で導出（`matchesFieldFilters` → `parseProjectItems` → state フィルタ）。(5) `dependencies` を `useMemo([rawItems])` で導出（`parseProjectDependencies`）。(6) `isRevalidating` state を追加し、キャッシュ表示後の API フェッチ中に true にする。(7) `refetch()` は `forceRefetchRef` を使いキャッシュバイパス。 | Restrictions: 既存の純粋関数（`parseProjectItems`, `parseProjectDependencies`, `matchesFieldFilters`, `buildIssueId`）は変更しない。`UseProjectIssuesResult` に `isRevalidating` を追加する以外、既存の返り値の型を壊さない。 | Success: フィルタ変更時に API リクエストが飛ばない。キャッシュヒット時は即時表示 + バックグラウンド更新。キャッシュミス時は loading 表示。refetch で強制再取得。既存テスト（`use-project-issues.test.ts`）がパスする。`npm run build` で型エラーなし。 | After completing implementation, mark this task as [-] in tasks.md, log implementation with log-implementation tool, then mark as [x] when done._
 
-- [ ] 6. `useIssueMutations` にキャッシュ無効化を追加する
+- [x] 6. `useIssueMutations` にキャッシュ無効化を追加する
   - File: `web/src/hooks/use-issue-mutations.ts`, `web/src/components/issue-dashboard.tsx`
   - `useIssueMutations` の引数に `projectId?: string` を追加する
   - mutation 成功時に `invalidateCache(projectId)` を呼び出す

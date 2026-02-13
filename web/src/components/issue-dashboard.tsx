@@ -34,7 +34,7 @@ export function IssueDashboard() {
     ...filters,
   });
 
-  const mutations = useIssueMutations();
+  const mutations = useIssueMutations(filters.projectId);
 
   useEffect(() => {
     setGraphDependencies(dependencies);
