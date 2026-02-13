@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { HttpResponse, http } from "msw";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { IssueDashboard } from "./issue-dashboard";
 
 const mockProjectItems = {
@@ -205,11 +205,16 @@ export const WithIssues: Story = {
 
     await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
 
-    // Wait for projects to load and select one
-    const projectSelect = await canvas.findByLabelText("Project", undefined, {
-      timeout: 3000,
-    });
-    await userEvent.selectOptions(projectSelect, "PVT_1");
+    // Wait for projects to load
+    await waitFor(
+      () => {
+        const select = canvas.getByLabelText("Project") as HTMLSelectElement;
+        expect(select.disabled).toBe(false);
+        expect(select.options.length).toBeGreaterThan(1);
+      },
+      { timeout: 3000 },
+    );
+    await userEvent.selectOptions(canvas.getByLabelText("Project"), "PVT_1");
 
     // グラフが描画されるまで待機
     await expect(
@@ -230,10 +235,15 @@ export const EmptyResult: Story = {
 
     await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
 
-    const projectSelect = await canvas.findByLabelText("Project", undefined, {
-      timeout: 3000,
-    });
-    await userEvent.selectOptions(projectSelect, "PVT_1");
+    await waitFor(
+      () => {
+        const select = canvas.getByLabelText("Project") as HTMLSelectElement;
+        expect(select.disabled).toBe(false);
+        expect(select.options.length).toBeGreaterThan(1);
+      },
+      { timeout: 3000 },
+    );
+    await userEvent.selectOptions(canvas.getByLabelText("Project"), "PVT_1");
 
     await expect(
       await canvas.findByText("Issue が見つかりませんでした", undefined, {
@@ -253,10 +263,15 @@ export const ErrorState: Story = {
 
     await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
 
-    const projectSelect = await canvas.findByLabelText("Project", undefined, {
-      timeout: 3000,
-    });
-    await userEvent.selectOptions(projectSelect, "PVT_1");
+    await waitFor(
+      () => {
+        const select = canvas.getByLabelText("Project") as HTMLSelectElement;
+        expect(select.disabled).toBe(false);
+        expect(select.options.length).toBeGreaterThan(1);
+      },
+      { timeout: 3000 },
+    );
+    await userEvent.selectOptions(canvas.getByLabelText("Project"), "PVT_1");
 
     await expect(
       await canvas.findByText(/Error:/, undefined, { timeout: 3000 }),

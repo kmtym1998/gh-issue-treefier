@@ -23,7 +23,9 @@ node_modules/
 .env.local
 
 # Build
-dist/
+/dist/
 build/
 /gh-issue-treefier
-internal/server/dist/
+internal/server/dist/*
+!internal/server/dist/index.html
+!internal/server/dist/vite.svg

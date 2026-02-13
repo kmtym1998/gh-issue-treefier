@@ -30,7 +30,7 @@ func newConsoleCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int("port", 0, "Port to listen on (0 for auto)")
+	cmd.Flags().Int("port", 7000, "Port to listen on")
 	cmd.Flags().StringP("repo", "R", "", "Repository in OWNER/REPO format")
 	cmd.Flags().Bool("no-browser", false, "Do not open the browser automatically")
 
@@ -51,7 +51,7 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read no-browser flag: %w", err)
 	}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	ln, err := listenWithFallback(port, !cmd.Flags().Changed("port"))
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
@@ -84,6 +84,27 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+const maxPortFallbackAttempts = 10
+
+// listenWithFallback は指定ポートでリッスンを試みる。
+// fallback が true（--port 未指定）の場合、ポートが使用中なら port+1, port+2, ... と順に試行する。
+// fallback が false（--port 明示指定）の場合、指定ポートのみを試みる。
+func listenWithFallback(port int, fallback bool) (net.Listener, error) {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err == nil || !fallback {
+		return ln, err
+	}
+
+	for i := 1; i < maxPortFallbackAttempts; i++ {
+		ln, err = net.Listen("tcp", fmt.Sprintf(":%d", port+i))
+		if err == nil {
+			return ln, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to listen on ports %d-%d", port, port+maxPortFallbackAttempts-1)
 }
 
 func resolveRepo(repoOverride string) (repository.Repository, error) {
