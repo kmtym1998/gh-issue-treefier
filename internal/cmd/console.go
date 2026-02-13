@@ -32,6 +32,7 @@ func newConsoleCmd() *cobra.Command {
 
 	cmd.Flags().Int("port", 7000, "Port to listen on")
 	cmd.Flags().StringP("repo", "R", "", "Repository in OWNER/REPO format")
+	cmd.Flags().StringP("project-id", "p", "", "Project ID (skips interactive selection)")
 	cmd.Flags().Bool("no-browser", false, "Do not open the browser automatically")
 
 	return cmd
@@ -45,6 +46,10 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 	repoOverride, err := cmd.Flags().GetString("repo")
 	if err != nil {
 		return fmt.Errorf("failed to read repo flag: %w", err)
+	}
+	projectID, err := cmd.Flags().GetString("project-id")
+	if err != nil {
+		return fmt.Errorf("failed to read project-id flag: %w", err)
 	}
 	noBrowser, err := cmd.Flags().GetBool("no-browser")
 	if err != nil {
@@ -64,11 +69,11 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	openURL, err := buildURL(actualPort, repo)
+	openURL, err := buildURL(actualPort, repo, projectID)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Starting server on http://localhost:%d\n", actualPort)
+	fmt.Printf("Starting server on %s\n", openURL)
 
 	if !noBrowser {
 		if err := util.OpenBrowser(openURL); err != nil {
@@ -118,10 +123,15 @@ func resolveRepo(repoOverride string) (repository.Repository, error) {
 	return repository.Repository{Owner: parts[0], Name: parts[1]}, nil
 }
 
-func buildURL(port int, repo repository.Repository) (string, error) {
+func buildURL(port int, repo repository.Repository, projectID string) (string, error) {
 	u := fmt.Sprintf("http://localhost:%d", port)
 	q := url.Values{}
 	q.Set("owner", repo.Owner)
+
+	if projectID != "" {
+		q.Set("project_id", projectID)
+		return u + "?" + q.Encode(), nil
+	}
 
 	term := term.FromEnv()
 	in, ok := term.In().(*os.File)
