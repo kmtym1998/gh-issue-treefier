@@ -9,7 +9,7 @@
   - _Requirements: その他考慮事項 - サーバー起動ポートの固定_
   - _Prompt: Implement the task for spec indexeddb-issue-cache, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Go Developer | Task: `internal/cmd/console.go` のポート選択ロジックを変更する。デフォルトポートを 7000 に変更し、使用中の場合は 7001, 7002, ... と最大 10 ポート試行するフォールバックを実装する。`--port` フラグで明示指定された場合はフォールバックなしでそのポートのみ使用する。 | Restrictions: `internal/server/server.go` は変更しない。既存の `net.Listen` → `srv.Start(ln)` フローは維持する。フォールバック試行回数は最大 10 回とする。 | Success: `--port` 未指定時にデフォルト 7000 でリッスンし、7000 が使用中なら 7001 以降を試みる。`--port 8080` 指定時は 8080 のみ試みる。既存テストがパスする。 | After completing implementation, mark this task as [-] in tasks.md, log implementation with log-implementation tool, then mark as [x] when done._
 
-- [ ] 2. `idb` と `fake-indexeddb` をインストールする
+- [x] 2. `idb` と `fake-indexeddb` をインストールする
   - File: `web/package.json`
   - `idb` を本番依存に、`fake-indexeddb` を dev 依存にインストールする
   - _Requirements: ステアリングドキュメントとの整合性 - tech.md との技術基準_
