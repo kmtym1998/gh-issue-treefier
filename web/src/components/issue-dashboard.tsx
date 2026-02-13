@@ -30,9 +30,10 @@ export function IssueDashboard() {
     [syncToUrl],
   );
 
-  const { issues, dependencies, loading, error } = useProjectIssues({
-    ...filters,
-  });
+  const { issues, dependencies, loading, isRevalidating, error } =
+    useProjectIssues({
+      ...filters,
+    });
 
   const mutations = useIssueMutations(filters.projectId);
 
@@ -243,13 +244,18 @@ export function IssueDashboard() {
           )}
 
           {hasQuery && !loading && issues.length > 0 && (
-            <IssueGraph
-              issues={issues}
-              dependencies={graphDependencies}
-              onNodeClick={setSelectedIssueId}
-              onEdgeDelete={handleEdgeDelete}
-              onEdgeAdd={handleEdgeAdd}
-            />
+            <>
+              {isRevalidating && (
+                <span style={styles.revalidating}>更新中...</span>
+              )}
+              <IssueGraph
+                issues={issues}
+                dependencies={graphDependencies}
+                onNodeClick={setSelectedIssueId}
+                onEdgeDelete={handleEdgeDelete}
+                onEdgeAdd={handleEdgeAdd}
+              />
+            </>
           )}
 
           {hasQuery && !loading && mutationError && (
@@ -285,6 +291,14 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+  },
+  revalidating: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    color: "#656d76",
+    fontSize: 12,
   },
   placeholder: {
     color: "#656d76",

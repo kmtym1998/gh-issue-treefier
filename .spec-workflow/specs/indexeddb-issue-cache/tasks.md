@@ -55,7 +55,7 @@
   - _Requirements: データ変更時の整合性_
   - _Prompt: Implement the task for spec indexeddb-issue-cache, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer | Task: (1) `web/src/hooks/use-issue-mutations.ts` の `useIssueMutations` 関数に第1引数 `projectId?: string` を追加する。`wrap` 関数内の `onSuccess?.()` の直前に `if (projectId) { invalidateCache(projectId); }` を追加する。`wrap` の deps に `projectId` を追加する。(2) `web/src/components/issue-dashboard.tsx` で `useIssueMutations()` を `useIssueMutations(filters.projectId)` に変更する。 | Restrictions: 既存の mutation 関数（`addSubIssue`, `removeSubIssue`, `addBlockedBy`, `removeBlockedBy`）は変更しない。`UseIssueMutationsResult` 型は変更しない。 | Success: mutation 成功後にキャッシュが無効化される。`npm run build` で型エラーなし。既存テスト（`use-issue-mutations.test.ts`）がパスする。 | After completing implementation, mark this task as [-] in tasks.md, log implementation with log-implementation tool, then mark as [x] when done._
 
-- [ ] 7. `IssueDashboard` にバックグラウンド更新中の表示を追加する
+- [x] 7. `IssueDashboard` にバックグラウンド更新中の表示を追加する
   - File: `web/src/components/issue-dashboard.tsx`
   - `useProjectIssues` の返り値から `isRevalidating` を取得する
   - バックグラウンド更新中であることを示す視覚的なインジケータ（例: 小さなスピナーやテキスト）を表示する
@@ -63,7 +63,7 @@
   - _Requirements: バックグラウンド更新 - バックグラウンド更新中であることをユーザーに視覚的に示す_
   - _Prompt: Implement the task for spec indexeddb-issue-cache, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer | Task: `web/src/components/issue-dashboard.tsx` で `useProjectIssues` の返り値から `isRevalidating` を取得し、バックグラウンド更新中に控えめなインジケータを表示する。グラフエリア内の右上等に「更新中...」のような小さなテキストを配置する。 | Restrictions: 既存のレイアウトを大きく変更しない。loading 状態（初回読み込み）の表示は従来通り維持する。 | Success: キャッシュヒット + バックグラウンド更新中に視覚的なインジケータが表示される。更新完了後にインジケータが消える。初回読み込み時は従来の loading 表示のまま。 | After completing implementation, mark this task as [-] in tasks.md, log implementation with log-implementation tool, then mark as [x] when done._
 
-- [ ] 8. ビルドとテストの最終確認
+- [x] 8. ビルドとテストの最終確認
   - `npm run build` で型エラーがないことを確認する
   - `npm test` で全テスト（既存 + 新規）がパスすることを確認する
   - _Requirements: 全要件_
