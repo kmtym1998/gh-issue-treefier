@@ -15,7 +15,7 @@
   - _Requirements: ステアリングドキュメントとの整合性 - tech.md との技術基準_
   - _Prompt: Implement the task for spec indexeddb-issue-cache, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer | Task: `web/` ディレクトリで `npm install idb` と `npm install --save-dev fake-indexeddb` を実行する。 | Restrictions: 他のパッケージは追加・更新しない。 | Success: `web/package.json` の dependencies に `idb`、devDependencies に `fake-indexeddb` が追加されている。 | After completing implementation, mark this task as [-] in tasks.md, log implementation with log-implementation tool, then mark as [x] when done._
 
-- [ ] 3. `idb-cache` モジュールを作成する
+- [x] 3. `idb-cache` モジュールを作成する
   - File: `web/src/lib/idb-cache.ts`
   - IndexedDB のキャッシュ CRUD 操作を提供するスタンドアロンモジュールを新規作成する
   - エクスポート関数: `getCachedItems`, `setCachedItems`, `invalidateCache`, `clearAllCache`
@@ -26,7 +26,7 @@
   - _Requirements: 即時表示、非対応環境での動作_
   - _Prompt: Implement the task for spec indexeddb-issue-cache, first run spec-workflow-guide to get the workflow guide then implement the task: Role: TypeScript Developer | Task: `web/src/lib/idb-cache.ts` を新規作成する。`idb` ライブラリの `openDB` を使い、DB 名 `gh-issue-treefier`、ストア `projectItems`（キー: `projectId`）で IndexedDB キャッシュモジュールを実装する。`getCachedItems(projectId)` は `{ projectId, items, cachedAt }` または null を返す。`setCachedItems(projectId, items)` はキャッシュを書き込む。`invalidateCache(projectId)` と `clearAllCache()` で削除操作を提供する。 | Restrictions: React に依存しない純粋なユーティリティとして実装する。全操作を try/catch でラップし、IndexedDB 非対応環境でも例外を投げない。DB コネクションはモジュールスコープのシングルトンとする。 | Success: 4 つの関数が正しくエクスポートされ、IndexedDB の読み書き・削除が動作する。エラー時に例外が投げられない。 | After completing implementation, mark this task as [-] in tasks.md, log implementation with log-implementation tool, then mark as [x] when done._
 
-- [ ] 4. `idb-cache` モジュールのユニットテストを作成する
+- [x] 4. `idb-cache` モジュールのユニットテストを作成する
   - File: `web/src/lib/idb-cache.test.ts`
   - `fake-indexeddb/auto` を使って IndexedDB をポリフィルしたテストを作成する
   - テストケース: get/set ラウンドトリップ、存在しないキーで null、`invalidateCache`、`clearAllCache`、エラー時に例外が投げられない
