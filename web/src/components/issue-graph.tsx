@@ -10,8 +10,8 @@ import {
   ReactFlow,
   useNodesState,
 } from "@xyflow/react";
-import dagre from "dagre";
-import { useCallback, useMemo, useState } from "react";
+import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dependency, DependencyType, Issue } from "../types/issue";
 
 import "@xyflow/react/dist/style.css";
@@ -90,40 +90,66 @@ export function dependenciesToEdges(dependencies: Dependency[]): Edge[] {
   });
 }
 
+const elk = new ELK();
+
 /**
- * dagre を使って Node 配列にレイアウト座標を付与する。
+ * ELKjs を使って Node 配列にレイアウト座標を付与する。
  * 元の配列は変更せず、新しい配列を返す。
  */
-export function layoutNodes(
+export async function layoutNodes(
   nodes: Node[],
   edges: Edge[],
   direction: "TB" | "LR" = "TB",
-): Node[] {
-  const g = new dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: direction, ranksep: 60, nodesep: 30 });
-
-  for (const node of nodes) {
-    g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
-  }
-  for (const edge of edges) {
-    g.setEdge(edge.source, edge.target);
-  }
-
-  dagre.layout(g);
+): Promise<Node[]> {
+  if (nodes.length === 0) return [];
 
   const isHorizontal = direction === "LR";
 
+  // ELK は存在しないノードへのエッジ参照をエラーにするため、
+  // 両端のノードが存在するエッジのみを渡す
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const validEdges = edges.filter(
+    (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
+  );
+
+  const graph: ElkNode = {
+    id: "root",
+    layoutOptions: {
+      "elk.algorithm": "layered",
+      "elk.direction": isHorizontal ? "RIGHT" : "DOWN",
+      "elk.spacing.nodeNode": "30",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "120",
+      "elk.layered.wrapping.strategy": "MULTI_EDGE",
+      "elk.aspectRatio": "1.6",
+      "elk.layered.compaction.postCompaction.strategy": "EDGE_LENGTH",
+      "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+    },
+    children: nodes.map((node) => ({
+      id: node.id,
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+    })),
+    edges: validEdges.map((edge) => ({
+      id: edge.id,
+      sources: [edge.source],
+      targets: [edge.target],
+    })),
+  };
+
+  const layouted = await elk.layout(graph);
+
+  const posMap = new Map<string, { x: number; y: number }>();
+  for (const child of layouted.children ?? []) {
+    posMap.set(child.id, { x: child.x ?? 0, y: child.y ?? 0 });
+  }
+
   return nodes.map((node) => {
-    const pos = g.node(node.id);
+    const pos = posMap.get(node.id) ?? { x: 0, y: 0 };
     return {
       ...node,
       targetPosition: (isHorizontal ? "left" : "top") as Position,
       sourcePosition: (isHorizontal ? "right" : "bottom") as Position,
-      position: {
-        x: pos.x - NODE_WIDTH / 2,
-        y: pos.y - NODE_HEIGHT / 2,
-      },
+      position: { x: pos.x, y: pos.y },
     };
   });
 }
@@ -137,7 +163,7 @@ export interface IssueGraphProps {
 }
 
 export function IssueGraph(props: IssueGraphProps) {
-  // issue の集合が変わったときだけリマウントし、dagre レイアウトを再計算する
+  // issue の集合が変わったときだけリマウントし、ELK レイアウトを再計算する
   const issueKey = useMemo(() => {
     const nodesPart = props.issues
       .map((i) => i.id)
@@ -160,23 +186,72 @@ function IssueGraphInner({
   onEdgeDelete,
   onEdgeAdd,
 }: IssueGraphProps) {
-  const [connectionMode, setConnectionMode] =
-    useState<DependencyType>("sub_issue");
+  const [layoutedNodes, setLayoutedNodes] = useState<Node[] | null>(null);
 
-  // マウント時に一度だけ dagre レイアウトを計算（key 変更でリマウントされる）
-  const [initialNodes] = useState(() => {
+  useEffect(() => {
+    let cancelled = false;
     const nodes = issuesToNodes(issues);
     const edges = dependenciesToEdges(dependencies);
-    return layoutNodes(nodes, edges);
-  });
-
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+    layoutNodes(nodes, edges).then((result) => {
+      if (!cancelled) setLayoutedNodes(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [issues, dependencies]);
 
   // エッジは dependencies から純粋に導出
   const edges = useMemo(
     () => dependenciesToEdges(dependencies),
     [dependencies],
   );
+
+  if (!layoutedNodes) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#656d76",
+          fontSize: 14,
+        }}
+      >
+        Loading layout…
+      </div>
+    );
+  }
+
+  return (
+    <IssueGraphReady
+      initialNodes={layoutedNodes}
+      edges={edges}
+      onNodeClick={onNodeClick}
+      onEdgeDelete={onEdgeDelete}
+      onEdgeAdd={onEdgeAdd}
+    />
+  );
+}
+
+function IssueGraphReady({
+  initialNodes,
+  edges,
+  onNodeClick,
+  onEdgeDelete,
+  onEdgeAdd,
+}: {
+  initialNodes: Node[];
+  edges: Edge[];
+  onNodeClick?: (issueId: string) => void;
+  onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
+  onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
+}) {
+  const [connectionMode, setConnectionMode] =
+    useState<DependencyType>("sub_issue");
+
+  const [nodes, , onNodesChange] = useNodesState(initialNodes);
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {

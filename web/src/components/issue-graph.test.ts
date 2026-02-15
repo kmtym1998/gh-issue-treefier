@@ -164,10 +164,10 @@ describe("dependenciesToEdges", () => {
 });
 
 describe("layoutNodes", () => {
-  it("assigns positions to nodes", () => {
+  it("assigns positions to nodes", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges);
+    const layouted = await layoutNodes(nodes, edges);
 
     expect(layouted).toHaveLength(3);
     for (const node of layouted) {
@@ -178,10 +178,10 @@ describe("layoutNodes", () => {
     }
   });
 
-  it("sets TB direction positions correctly", () => {
+  it("sets TB direction positions correctly", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges, "TB");
+    const layouted = await layoutNodes(nodes, edges, "TB");
 
     const nodeMap = Object.fromEntries(layouted.map((n) => [n.id, n]));
 
@@ -196,24 +196,25 @@ describe("layoutNodes", () => {
     );
   });
 
-  it("sets LR direction positions correctly", () => {
+  it("sets LR direction positions correctly", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges, "LR");
+    const layouted = await layoutNodes(nodes, edges, "LR");
 
     const nodeMap = Object.fromEntries(layouted.map((n) => [n.id, n]));
 
     expect(nodeMap["owner/repo#1"]).toBeDefined();
     expect(nodeMap["owner/repo#2"]).toBeDefined();
-    expect(nodeMap["owner/repo#1"].position.x).toBeLessThan(
+    // wrapping が効く場合、親ノードの x が子と同じになることがあるため <=
+    expect(nodeMap["owner/repo#1"].position.x).toBeLessThanOrEqual(
       nodeMap["owner/repo#2"].position.x,
     );
   });
 
-  it("sets sourcePosition and targetPosition for TB direction", () => {
+  it("sets sourcePosition and targetPosition for TB direction", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges, "TB");
+    const layouted = await layoutNodes(nodes, edges, "TB");
 
     for (const node of layouted) {
       expect(node.targetPosition).toBe("top");
@@ -221,10 +222,10 @@ describe("layoutNodes", () => {
     }
   });
 
-  it("sets sourcePosition and targetPosition for LR direction", () => {
+  it("sets sourcePosition and targetPosition for LR direction", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges, "LR");
+    const layouted = await layoutNodes(nodes, edges, "LR");
 
     for (const node of layouted) {
       expect(node.targetPosition).toBe("left");
@@ -232,21 +233,21 @@ describe("layoutNodes", () => {
     }
   });
 
-  it("does not mutate original nodes", () => {
+  it("does not mutate original nodes", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
     const originalPositions = nodes.map((n) => ({ ...n.position }));
 
-    layoutNodes(nodes, edges);
+    await layoutNodes(nodes, edges);
 
     nodes.forEach((node, i) => {
       expect(node.position).toEqual(originalPositions[i]);
     });
   });
 
-  it("handles nodes without edges", () => {
+  it("handles nodes without edges", async () => {
     const nodes = issuesToNodes(sampleIssues);
-    const layouted = layoutNodes(nodes, []);
+    const layouted = await layoutNodes(nodes, []);
 
     expect(layouted).toHaveLength(3);
     for (const node of layouted) {
@@ -255,7 +256,7 @@ describe("layoutNodes", () => {
     }
   });
 
-  it("handles empty input", () => {
-    expect(layoutNodes([], [])).toEqual([]);
+  it("handles empty input", async () => {
+    expect(await layoutNodes([], [])).toEqual([]);
   });
 });
