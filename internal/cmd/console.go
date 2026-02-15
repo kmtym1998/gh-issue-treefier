@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
@@ -42,6 +43,11 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 	port, err := cmd.Flags().GetInt("port")
 	if err != nil {
 		return fmt.Errorf("failed to read port flag: %w", err)
+	}
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		if p, err := strconv.Atoi(envPort); err == nil {
+			port = p
+		}
 	}
 	repoOverride, err := cmd.Flags().GetString("repo")
 	if err != nil {
