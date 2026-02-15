@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useState } from "react";
+import { type SubmitEvent, useCallback, useState } from "react";
 import type { Issue } from "../types/issue";
 
 export interface IssueDetailProps {
@@ -30,7 +30,7 @@ export function IssueDetail({
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleAddSubIssue = useCallback(
-    async (e: FormEvent) => {
+    async (e: SubmitEvent) => {
       e.preventDefault();
       if (!issue || !onAddSubIssue || !childNumber.trim()) return;
 
@@ -55,7 +55,7 @@ export function IssueDetail({
   );
 
   const handleAddBlockedBy = useCallback(
-    async (e: FormEvent) => {
+    async (e: SubmitEvent) => {
       e.preventDefault();
       if (!issue || !onAddBlockedBy || !blockerNumber.trim()) return;
 
