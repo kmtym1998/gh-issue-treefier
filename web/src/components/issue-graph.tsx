@@ -138,14 +138,17 @@ export interface IssueGraphProps {
 
 export function IssueGraph(props: IssueGraphProps) {
   // issue の集合が変わったときだけリマウントし、dagre レイアウトを再計算する
-  const issueKey = useMemo(
-    () =>
-      props.issues
-        .map((i) => i.id)
-        .sort()
-        .join(","),
-    [props.issues],
-  );
+  const issueKey = useMemo(() => {
+    const nodesPart = props.issues
+      .map((i) => i.id)
+      .sort()
+      .join(",");
+    const edgesPart = props.dependencies
+      .map((d) => `${d.source}-${d.target}-${d.type}`)
+      .sort()
+      .join(",");
+    return `${nodesPart}|${edgesPart}`;
+  }, [props.issues, props.dependencies]);
 
   return <IssueGraphInner key={issueKey} {...props} />;
 }

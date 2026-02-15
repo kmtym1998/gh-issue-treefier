@@ -196,7 +196,9 @@ export function matchesFieldFilters(
   return true;
 }
 
-async function fetchAllItems(projectId: string): Promise<GitHubProjectV2Item[]> {
+async function fetchAllItems(
+  projectId: string,
+): Promise<GitHubProjectV2Item[]> {
   const allItems: GitHubProjectV2Item[] = [];
   let cursor: string | null = null;
   let hasNextPage = true;
