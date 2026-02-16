@@ -23,7 +23,7 @@ dev-web:
 	cd web && npm run dev
 
 dev-api:
-	PORT=7777 go run ./cmd/gh-issue-treefier console
+	PORT=7777 go run ./cmd/gh-issue-treefier console --no-browser
 
 # リント・フォーマット
 lint:
