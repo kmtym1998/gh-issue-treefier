@@ -8,17 +8,28 @@ import {
   type NodeProps,
   Position,
   ReactFlow,
+  SelectionMode,
   useNodesState,
 } from "@xyflow/react";
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dependency, DependencyType, Issue } from "../types/issue";
+import { getNodePositions, setNodePositions } from "../lib/idb-cache";
 
 import "@xyflow/react/dist/style.css";
 
-function IssueNode({ data }: NodeProps) {
+function IssueNode({ data, selected }: NodeProps) {
+  const baseStyle = data.style as React.CSSProperties;
+  const style: React.CSSProperties = selected
+    ? {
+        ...baseStyle,
+        boxShadow: "0 0 0 2px #0969da",
+        borderColor: "#0969da",
+      }
+    : baseStyle;
+
   return (
-    <div style={data.style as React.CSSProperties}>
+    <div style={style}>
       <Handle type="target" position={Position.Top} />
       {data.label as string}
       <Handle type="source" position={Position.Bottom} />
@@ -157,7 +168,7 @@ export async function layoutNodes(
 export interface IssueGraphProps {
   issues: Issue[];
   dependencies: Dependency[];
-  onNodeClick?: (issueId: string) => void;
+  onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
   onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
 }
@@ -176,29 +187,41 @@ export function IssueGraph(props: IssueGraphProps) {
     return `${nodesPart}|${edgesPart}`;
   }, [props.issues, props.dependencies]);
 
-  return <IssueGraphInner key={issueKey} {...props} />;
+  return <IssueGraphInner key={issueKey} graphKey={issueKey} {...props} />;
 }
 
 function IssueGraphInner({
+  graphKey,
   issues,
   dependencies,
   onNodeClick,
   onEdgeDelete,
   onEdgeAdd,
-}: IssueGraphProps) {
+}: IssueGraphProps & { graphKey: string }) {
   const [layoutedNodes, setLayoutedNodes] = useState<Node[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const nodes = issuesToNodes(issues);
     const edges = dependenciesToEdges(dependencies);
-    layoutNodes(nodes, edges).then((result) => {
-      if (!cancelled) setLayoutedNodes(result);
+    layoutNodes(nodes, edges).then(async (result) => {
+      if (cancelled) return;
+      const saved = await getNodePositions(graphKey);
+      if (cancelled) return;
+      if (saved) {
+        const restored = result.map((node) => {
+          const pos = saved.positions[node.id];
+          return pos ? { ...node, position: pos } : node;
+        });
+        setLayoutedNodes(restored);
+      } else {
+        setLayoutedNodes(result);
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [issues, dependencies]);
+  }, [issues, dependencies, graphKey]);
 
   // エッジは dependencies から純粋に導出
   const edges = useMemo(
@@ -226,6 +249,7 @@ function IssueGraphInner({
 
   return (
     <IssueGraphReady
+      graphKey={graphKey}
       initialNodes={layoutedNodes}
       edges={edges}
       onNodeClick={onNodeClick}
@@ -236,26 +260,60 @@ function IssueGraphInner({
 }
 
 function IssueGraphReady({
+  graphKey,
   initialNodes,
   edges,
   onNodeClick,
   onEdgeDelete,
   onEdgeAdd,
 }: {
+  graphKey: string;
   initialNodes: Node[];
   edges: Edge[];
-  onNodeClick?: (issueId: string) => void;
+  onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
   onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
 }) {
   const [connectionMode, setConnectionMode] =
     useState<DependencyType>("sub_issue");
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, , onNodesChangeOriginal] = useNodesState(initialNodes);
 
-  const handleNodeClick = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
-      onNodeClick?.(node.id);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+
+  const onNodesChange = useCallback(
+    (changes: Parameters<typeof onNodesChangeOriginal>[0]) => {
+      onNodesChangeOriginal(changes);
+
+      const hasDragEnd = changes.some(
+        (c) => c.type === "position" && c.dragging === false,
+      );
+      if (!hasDragEnd) return;
+
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        const positions: Record<string, { x: number; y: number }> = {};
+        for (const node of nodesRef.current) {
+          positions[node.id] = { x: node.position.x, y: node.position.y };
+        }
+        setNodePositions(graphKey, positions);
+      }, 500);
+    },
+    [onNodesChangeOriginal, graphKey],
+  );
+
+  const [selectedCount, setSelectedCount] = useState(0);
+
+  const handleSelectionChange = useCallback(
+    ({ nodes: selected }: { nodes: Node[] }) => {
+      setSelectedCount(selected.length);
+      if (selected.length === 1) {
+        onNodeClick?.(selected[0].id);
+      } else {
+        onNodeClick?.(null);
+      }
     },
     [onNodeClick],
   );
@@ -315,15 +373,24 @@ function IssueGraphReady({
           Blocked By
         </button>
       </div>
+      {selectedCount >= 2 && (
+        <div style={graphStyles.selectionBadge}>
+          {selectedCount} nodes selected
+        </div>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
-        onNodeClick={handleNodeClick}
+        onSelectionChange={handleSelectionChange}
         onEdgeClick={handleEdgeClick}
         onConnect={handleConnect}
         connectionLineStyle={connectionLineStyle}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
+        panOnDrag={[1, 2]}
+        panOnScroll
         fitView
         proOptions={{ hideAttribution: true }}
       >
@@ -355,6 +422,17 @@ const graphStyles: Record<string, React.CSSProperties> = {
     background: "#6e7781",
     color: "#fff",
     borderColor: "#6e7781",
+  },
+  selectionBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    padding: "4px 10px",
+    fontSize: 12,
+    background: "#0969da",
+    color: "#fff",
+    borderRadius: 12,
   },
   modeButtonActiveBlockedBy: {
     background: "#cf222e",

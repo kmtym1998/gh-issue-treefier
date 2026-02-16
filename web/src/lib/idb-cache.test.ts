@@ -4,8 +4,10 @@ import type { GitHubProjectV2Item } from "../types/github";
 import {
   clearAllCache,
   getCachedItems,
+  getNodePositions,
   invalidateCache,
   setCachedItems,
+  setNodePositions,
 } from "./idb-cache";
 
 const makeItem = (number: number): GitHubProjectV2Item => ({
@@ -74,5 +76,30 @@ describe("idb-cache", () => {
     const result = await getCachedItems("project-1");
     expect(result?.items).toHaveLength(2);
     expect(result?.items[0].content?.number).toBe(2);
+  });
+});
+
+describe("nodePositions", () => {
+  it("returns null for a non-existent key", async () => {
+    const result = await getNodePositions("non-existent");
+    expect(result).toBeNull();
+  });
+
+  it("round-trips get/set", async () => {
+    const positions = { node1: { x: 10, y: 20 }, node2: { x: 30, y: 40 } };
+    await setNodePositions("graph-key-1", positions);
+
+    const result = await getNodePositions("graph-key-1");
+    expect(result).not.toBeNull();
+    expect(result?.graphKey).toBe("graph-key-1");
+    expect(result?.positions).toEqual(positions);
+  });
+
+  it("overwrites existing positions on set", async () => {
+    await setNodePositions("graph-key-1", { node1: { x: 0, y: 0 } });
+    await setNodePositions("graph-key-1", { node1: { x: 99, y: 99 } });
+
+    const result = await getNodePositions("graph-key-1");
+    expect(result?.positions.node1).toEqual({ x: 99, y: 99 });
   });
 });
