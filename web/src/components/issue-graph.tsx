@@ -13,7 +13,7 @@ import {
 } from "@xyflow/react";
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getNodePositions, setNodePositions } from "../lib/idb-cache";
+import { getNodePositions, setNodePositions } from "../lib/cache";
 import type { Dependency, DependencyType, Issue } from "../types/issue";
 
 import "@xyflow/react/dist/style.css";
@@ -168,6 +168,7 @@ export async function layoutNodes(
 export interface IssueGraphProps {
   issues: Issue[];
   dependencies: Dependency[];
+  projectId: string;
   onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
   onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
@@ -183,17 +184,17 @@ export function IssueGraph(props: IssueGraphProps) {
       .join(",");
   }, [props.issues]);
 
-  return <IssueGraphInner key={issueKey} graphKey={issueKey} {...props} />;
+  return <IssueGraphInner key={issueKey} {...props} />;
 }
 
 function IssueGraphInner({
-  graphKey,
   issues,
   dependencies,
+  projectId,
   onNodeClick,
   onEdgeDelete,
   onEdgeAdd,
-}: IssueGraphProps & { graphKey: string }) {
+}: IssueGraphProps) {
   const [layoutedNodes, setLayoutedNodes] = useState<Node[] | null>(null);
 
   // マウント時の dependencies でレイアウトを計算する。
@@ -206,7 +207,7 @@ function IssueGraphInner({
     const edges = dependenciesToEdges(initialDepsRef.current);
     layoutNodes(nodes, edges).then(async (result) => {
       if (cancelled) return;
-      const saved = await getNodePositions(graphKey);
+      const saved = await getNodePositions(projectId);
       if (cancelled) return;
       if (saved) {
         const restored = result.map((node) => {
@@ -221,7 +222,7 @@ function IssueGraphInner({
     return () => {
       cancelled = true;
     };
-  }, [issues, graphKey]);
+  }, [issues, projectId]);
 
   // エッジは dependencies から純粋に導出
   const edges = useMemo(
@@ -249,7 +250,7 @@ function IssueGraphInner({
 
   return (
     <IssueGraphReady
-      graphKey={graphKey}
+      projectId={projectId}
       initialNodes={layoutedNodes}
       edges={edges}
       onNodeClick={onNodeClick}
@@ -260,14 +261,14 @@ function IssueGraphInner({
 }
 
 function IssueGraphReady({
-  graphKey,
+  projectId,
   initialNodes,
   edges,
   onNodeClick,
   onEdgeDelete,
   onEdgeAdd,
 }: {
-  graphKey: string;
+  projectId: string;
   initialNodes: Node[];
   edges: Edge[];
   onNodeClick?: (issueId: string | null) => void;
@@ -298,10 +299,10 @@ function IssueGraphReady({
         for (const node of nodesRef.current) {
           positions[node.id] = { x: node.position.x, y: node.position.y };
         }
-        setNodePositions(graphKey, positions);
+        setNodePositions(projectId, positions);
       }, 500);
     },
-    [onNodesChangeOriginal, graphKey],
+    [onNodesChangeOriginal, projectId],
   );
 
   const [selectedCount, setSelectedCount] = useState(0);

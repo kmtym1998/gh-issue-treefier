@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { graphql, restGet, restPost } from "../api-client";
-import { invalidateCache } from "../lib/idb-cache";
+import { invalidateCache } from "../lib/cache";
 
 interface GitHubIssue {
   id: number;

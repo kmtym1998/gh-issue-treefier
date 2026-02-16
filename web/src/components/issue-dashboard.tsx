@@ -283,6 +283,7 @@ export function IssueDashboard() {
               <IssueGraph
                 issues={issues}
                 dependencies={graphDependencies}
+                projectId={filters.projectId}
                 onNodeClick={setSelectedIssueId}
                 onEdgeDelete={handleEdgeDelete}
                 onEdgeAdd={handleEdgeAdd}

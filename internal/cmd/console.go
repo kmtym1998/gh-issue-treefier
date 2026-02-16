@@ -11,10 +11,14 @@ import (
 	"strconv"
 	"strings"
 
+	"path/filepath"
+	"time"
+
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/repository"
 	"github.com/cli/go-gh/v2/pkg/term"
+	"github.com/kmtym1998/gh-issue-treefier/internal/cache"
 	"github.com/kmtym1998/gh-issue-treefier/internal/github"
 	"github.com/kmtym1998/gh-issue-treefier/internal/server"
 	"github.com/kmtym1998/gh-issue-treefier/internal/util"
@@ -68,7 +72,16 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 	}
 	actualPort := ln.Addr().(*net.TCPAddr).Port
 
-	srv := server.New(actualPort)
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+	cacheDir := filepath.Join(homeDir, ".cache", "gh-issue-treefier")
+	cacheStore := cache.NewStore(cacheDir)
+	cacheStore.Start(5 * time.Second)
+	defer cacheStore.Stop()
+
+	srv := server.New(actualPort, cacheStore)
 
 	repo, err := resolveRepo(repoOverride)
 	if err != nil {

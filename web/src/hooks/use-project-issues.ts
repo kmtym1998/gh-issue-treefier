@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { graphql } from "../api-client";
-import { getCachedItems, setCachedItems } from "../lib/idb-cache";
+import { getCachedItems, setCachedItems } from "../lib/cache";
 import type { GitHubProjectV2Item } from "../types/github";
 import type { Dependency, Issue } from "../types/issue";
 
