@@ -13,8 +13,8 @@ import {
 } from "@xyflow/react";
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Dependency, DependencyType, Issue } from "../types/issue";
 import { getNodePositions, setNodePositions } from "../lib/idb-cache";
+import type { Dependency, DependencyType, Issue } from "../types/issue";
 
 import "@xyflow/react/dist/style.css";
 
@@ -174,18 +174,14 @@ export interface IssueGraphProps {
 }
 
 export function IssueGraph(props: IssueGraphProps) {
-  // issue の集合が変わったときだけリマウントし、ELK レイアウトを再計算する
+  // issue の集合が変わったときだけリマウントし、ELK レイアウトを再計算する。
+  // エッジの変更ではリマウントせず、ReactFlow の edges prop 更新だけで反映する。
   const issueKey = useMemo(() => {
-    const nodesPart = props.issues
+    return props.issues
       .map((i) => i.id)
       .sort()
       .join(",");
-    const edgesPart = props.dependencies
-      .map((d) => `${d.source}-${d.target}-${d.type}`)
-      .sort()
-      .join(",");
-    return `${nodesPart}|${edgesPart}`;
-  }, [props.issues, props.dependencies]);
+  }, [props.issues]);
 
   return <IssueGraphInner key={issueKey} graphKey={issueKey} {...props} />;
 }
@@ -200,10 +196,14 @@ function IssueGraphInner({
 }: IssueGraphProps & { graphKey: string }) {
   const [layoutedNodes, setLayoutedNodes] = useState<Node[] | null>(null);
 
+  // マウント時の dependencies でレイアウトを計算する。
+  // エッジの追加/削除ではレイアウトを再計算しない（edges の useMemo 更新のみ）。
+  const initialDepsRef = useRef(dependencies);
+
   useEffect(() => {
     let cancelled = false;
     const nodes = issuesToNodes(issues);
-    const edges = dependenciesToEdges(dependencies);
+    const edges = dependenciesToEdges(initialDepsRef.current);
     layoutNodes(nodes, edges).then(async (result) => {
       if (cancelled) return;
       const saved = await getNodePositions(graphKey);
@@ -221,7 +221,7 @@ function IssueGraphInner({
     return () => {
       cancelled = true;
     };
-  }, [issues, dependencies, graphKey]);
+  }, [issues, graphKey]);
 
   // エッジは dependencies から純粋に導出
   const edges = useMemo(
