@@ -7,6 +7,7 @@ const meta = {
   title: "Components/IssueGraph",
   component: IssueGraph,
   args: {
+    projectId: "project-123",
     onEdgeAdd: fn(),
   },
   decorators: [
