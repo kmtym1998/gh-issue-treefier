@@ -328,9 +328,7 @@ export function IssueDashboard() {
             {isFlushing ? (
               <span>保存中...</span>
             ) : lastSavedAt ? (
-              <span>
-                最終保存: {lastSavedAt.toLocaleTimeString()}
-              </span>
+              <span>最終保存: {lastSavedAt.toLocaleTimeString()}</span>
             ) : null}
           </div>
         </div>
