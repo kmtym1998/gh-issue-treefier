@@ -77,7 +77,7 @@ func TestFlush_DiskRoundTrip(t *testing.T) {
 	s.MergeNodePositions("proj-1", map[string]NodePosition{
 		"node-1": {X: 100, Y: 200},
 	})
-	s.flushAll()
+	s.FlushAll()
 
 	// new store from same dir
 	s2 := NewStore(dir)

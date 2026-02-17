@@ -71,6 +71,10 @@ export interface CacheData {
   nodePositions: Record<string, { x: number; y: number }>;
 }
 
+export function cacheFlush(): Promise<void> {
+  return request<void>("/api/cache/flush", { method: "POST" });
+}
+
 export function cacheGet(projectId: string): Promise<CacheData> {
   return request<CacheData>(`/api/cache/${projectId}`);
 }

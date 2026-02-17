@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cacheFlush } from "../api-client";
 import { useFilterQueryParams } from "../hooks/use-filter-query-params";
 import { useIssueMutations } from "../hooks/use-issue-mutations";
 import { buildIssueId, useProjectIssues } from "../hooks/use-project-issues";
@@ -23,6 +24,34 @@ export function IssueDashboard() {
     removed: Dependency[];
   }>({ added: [], removed: [] });
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [isFlushing, setIsFlushing] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+  const flushingRef = useRef(false);
+  const handleFlush = useCallback(async () => {
+    if (flushingRef.current) return;
+    flushingRef.current = true;
+    setIsFlushing(true);
+    try {
+      await cacheFlush();
+      setLastSavedAt(new Date());
+    } finally {
+      setIsFlushing(false);
+      flushingRef.current = false;
+    }
+  }, []);
+
+  // Cmd+S / Ctrl+S でインメモリキャッシュをディスクに保存
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleFlush();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleFlush]);
 
   const handleFilterChange = useCallback(
     (next: FilterValues) => {
@@ -294,6 +323,16 @@ export function IssueDashboard() {
           {hasQuery && !loading && mutationError && (
             <p style={styles.error}>{mutationError}</p>
           )}
+
+          <div style={styles.saveStatus}>
+            {isFlushing ? (
+              <span>保存中...</span>
+            ) : lastSavedAt ? (
+              <span>
+                最終保存: {lastSavedAt.toLocaleTimeString()}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <IssueDetail
@@ -340,5 +379,13 @@ const styles: Record<string, React.CSSProperties> = {
   error: {
     color: "#cf222e",
     fontSize: 14,
+  },
+  saveStatus: {
+    position: "absolute",
+    bottom: 8,
+    left: 12,
+    zIndex: 10,
+    color: "#656d76",
+    fontSize: 12,
   },
 };

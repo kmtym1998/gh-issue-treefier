@@ -52,9 +52,9 @@ func (s *Store) Start(interval time.Duration) {
 		for {
 			select {
 			case <-ticker.C:
-				s.flushAll()
+				s.FlushAll()
 			case <-s.stopCh:
-				s.flushAll()
+				s.FlushAll()
 				return
 			}
 		}
@@ -141,7 +141,8 @@ func (s *Store) getOrCreate(projectID string) *ProjectCache {
 	return loaded
 }
 
-func (s *Store) flushAll() {
+// FlushAll は dirty なエントリをファイルに書き出す。
+func (s *Store) FlushAll() {
 	s.mu.Lock()
 	toFlush := make(map[string]*ProjectCache)
 	for id := range s.dirty {

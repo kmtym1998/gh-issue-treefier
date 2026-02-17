@@ -21,6 +21,13 @@ func (h *cacheHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// POST /api/cache/flush — 全キャッシュをディスクに書き出す
+	if path == "flush" && r.Method == http.MethodPost {
+		h.store.FlushAll()
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	projectID, sub, _ := strings.Cut(path, "/")
 	if projectID == "" {
 		http.Error(w, "missing project ID", http.StatusBadRequest)
