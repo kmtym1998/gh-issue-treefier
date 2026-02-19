@@ -101,6 +101,46 @@ export function dependenciesToEdges(dependencies: Dependency[]): Edge[] {
   });
 }
 
+/**
+ * 指定ノードから outgoing エッジを辿り、子孫ノードの ID を全て返す（再帰）。
+ * sub_issue と blocked_by の両方のエッジを辿る。
+ */
+export function getDescendantIds(nodeId: string, edges: Edge[]): Set<string> {
+  const result = new Set<string>();
+  const queue = [nodeId];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (current === undefined) break;
+    for (const edge of edges) {
+      if (edge.source === current && !result.has(edge.target)) {
+        result.add(edge.target);
+        queue.push(edge.target);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * 指定ノードから incoming エッジを辿り、祖先ノードの ID を全て返す（再帰）。
+ * sub_issue と blocked_by の両方のエッジを辿る。
+ */
+export function getAncestorIds(nodeId: string, edges: Edge[]): Set<string> {
+  const result = new Set<string>();
+  const queue = [nodeId];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (current === undefined) break;
+    for (const edge of edges) {
+      if (edge.target === current && !result.has(edge.source)) {
+        result.add(edge.source);
+        queue.push(edge.source);
+      }
+    }
+  }
+  return result;
+}
+
 const elk = new ELK();
 
 /**
@@ -278,7 +318,7 @@ function IssueGraphReady({
   const [connectionMode, setConnectionMode] =
     useState<DependencyType>("sub_issue");
 
-  const [nodes, , onNodesChangeOriginal] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChangeOriginal] = useNodesState(initialNodes);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nodesRef = useRef(nodes);
@@ -306,18 +346,35 @@ function IssueGraphReady({
   );
 
   const [selectedCount, setSelectedCount] = useState(0);
+  const [singleSelectedId, setSingleSelectedId] = useState<string | null>(null);
 
   const handleSelectionChange = useCallback(
     ({ nodes: selected }: { nodes: Node[] }) => {
       setSelectedCount(selected.length);
       if (selected.length === 1) {
+        setSingleSelectedId(selected[0].id);
         onNodeClick?.(selected[0].id);
       } else {
+        setSingleSelectedId(null);
         onNodeClick?.(null);
       }
     },
     [onNodeClick],
   );
+
+  const handleSelectDescendants = useCallback(() => {
+    if (!singleSelectedId) return;
+    const ids = getDescendantIds(singleSelectedId, edges);
+    ids.add(singleSelectedId);
+    setNodes((prev) => prev.map((n) => ({ ...n, selected: ids.has(n.id) })));
+  }, [singleSelectedId, edges, setNodes]);
+
+  const handleSelectAncestors = useCallback(() => {
+    if (!singleSelectedId) return;
+    const ids = getAncestorIds(singleSelectedId, edges);
+    ids.add(singleSelectedId);
+    setNodes((prev) => prev.map((n) => ({ ...n, selected: ids.has(n.id) })));
+  }, [singleSelectedId, edges, setNodes]);
 
   const handleEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
@@ -374,6 +431,24 @@ function IssueGraphReady({
           Blocked By
         </button>
       </div>
+      {singleSelectedId && (
+        <div style={graphStyles.selectionActions}>
+          <button
+            type="button"
+            style={graphStyles.selectionActionButton}
+            onClick={handleSelectDescendants}
+          >
+            Select Descendants
+          </button>
+          <button
+            type="button"
+            style={graphStyles.selectionActionButton}
+            onClick={handleSelectAncestors}
+          >
+            Select Ancestors
+          </button>
+        </div>
+      )}
       {selectedCount >= 2 && (
         <div style={graphStyles.selectionBadge}>
           {selectedCount} nodes selected
@@ -439,5 +514,23 @@ const graphStyles: Record<string, React.CSSProperties> = {
     background: "#cf222e",
     color: "#fff",
     borderColor: "#cf222e",
+  },
+  selectionActions: {
+    position: "absolute",
+    top: 40,
+    left: 0,
+    zIndex: 10,
+    display: "flex",
+    gap: 4,
+    padding: "0 12px",
+  },
+  selectionActionButton: {
+    padding: "3px 10px",
+    fontSize: 11,
+    border: "1px solid #d0d7de",
+    borderRadius: 4,
+    background: "#fff",
+    cursor: "pointer",
+    color: "#24292f",
   },
 };

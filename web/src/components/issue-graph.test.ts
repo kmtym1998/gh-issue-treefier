@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Dependency, Issue } from "../types/issue";
-import { dependenciesToEdges, issuesToNodes, layoutNodes } from "./issue-graph";
+import {
+  dependenciesToEdges,
+  getAncestorIds,
+  getDescendantIds,
+  issuesToNodes,
+  layoutNodes,
+} from "./issue-graph";
 
 const sampleIssues: Issue[] = [
   {
@@ -258,5 +264,73 @@ describe("layoutNodes", () => {
 
   it("handles empty input", async () => {
     expect(await layoutNodes([], [])).toEqual([]);
+  });
+});
+
+describe("getDescendantIds", () => {
+  const edges = dependenciesToEdges([
+    { source: "a", target: "b", type: "sub_issue" },
+    { source: "a", target: "c", type: "sub_issue" },
+    { source: "b", target: "d", type: "sub_issue" },
+    { source: "c", target: "e", type: "blocked_by" },
+  ]);
+
+  it("returns all descendants recursively", () => {
+    const result = getDescendantIds("a", edges);
+    expect(result).toEqual(new Set(["b", "c", "d", "e"]));
+  });
+
+  it("returns partial descendants from mid-tree node", () => {
+    const result = getDescendantIds("b", edges);
+    expect(result).toEqual(new Set(["d"]));
+  });
+
+  it("returns empty set for leaf node", () => {
+    const result = getDescendantIds("d", edges);
+    expect(result).toEqual(new Set());
+  });
+
+  it("returns empty set for unknown node", () => {
+    const result = getDescendantIds("unknown", edges);
+    expect(result).toEqual(new Set());
+  });
+
+  it("follows blocked_by edges as well", () => {
+    const result = getDescendantIds("c", edges);
+    expect(result).toEqual(new Set(["e"]));
+  });
+});
+
+describe("getAncestorIds", () => {
+  const edges = dependenciesToEdges([
+    { source: "a", target: "b", type: "sub_issue" },
+    { source: "a", target: "c", type: "sub_issue" },
+    { source: "b", target: "d", type: "sub_issue" },
+    { source: "c", target: "d", type: "blocked_by" },
+  ]);
+
+  it("returns all ancestors recursively", () => {
+    const result = getAncestorIds("d", edges);
+    expect(result).toEqual(new Set(["a", "b", "c"]));
+  });
+
+  it("returns direct parent only for shallow node", () => {
+    const result = getAncestorIds("b", edges);
+    expect(result).toEqual(new Set(["a"]));
+  });
+
+  it("returns empty set for root node", () => {
+    const result = getAncestorIds("a", edges);
+    expect(result).toEqual(new Set());
+  });
+
+  it("returns empty set for unknown node", () => {
+    const result = getAncestorIds("unknown", edges);
+    expect(result).toEqual(new Set());
+  });
+
+  it("follows blocked_by edges in reverse", () => {
+    const result = getAncestorIds("d", edges);
+    expect(result.has("c")).toBe(true);
   });
 });
