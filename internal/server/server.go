@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+
+	"github.com/kmtym1998/gh-issue-treefier/internal/cache"
 )
 
 type Server struct {
-	port int
+	port       int
+	cacheStore *cache.Store
 }
 
-func New(port int) *Server {
+func New(port int, cacheStore *cache.Store) *Server {
 	return &Server{
-		port: port,
+		port:       port,
+		cacheStore: cacheStore,
 	}
 }
 
@@ -26,6 +30,9 @@ func (s *Server) Start(ln net.Listener) error {
 	}
 	mux.HandleFunc("/api/github/rest/", proxy.ServeRESTProxy)
 	mux.HandleFunc("/api/github/graphql", proxy.ServeGraphQLProxy)
+
+	// Cache API
+	mux.Handle("/api/cache/", &cacheHandler{store: s.cacheStore})
 
 	// Static file serving with SPA fallback
 	mux.Handle("/", newSPAHandler())

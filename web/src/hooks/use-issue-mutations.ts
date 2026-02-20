@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { graphql, restGet, restPost } from "../api-client";
+import { invalidateCache } from "../lib/cache";
 
 interface GitHubIssue {
   id: number;
@@ -168,6 +169,7 @@ export interface UseIssueMutationsResult {
  * onSuccess が渡された場合、操作成功後に呼び出す（データの再取得用）。
  */
 export function useIssueMutations(
+  projectId?: string,
   onSuccess?: () => void,
 ): UseIssueMutationsResult {
   const [loading, setLoading] = useState(false);
@@ -179,6 +181,9 @@ export function useIssueMutations(
       setError(null);
       try {
         await fn();
+        if (projectId) {
+          invalidateCache(projectId);
+        }
         onSuccess?.();
       } catch (err) {
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -187,7 +192,7 @@ export function useIssueMutations(
         setLoading(false);
       }
     },
-    [onSuccess],
+    [projectId, onSuccess],
   );
 
   const add = useCallback(

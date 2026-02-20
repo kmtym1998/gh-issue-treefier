@@ -8,12 +8,17 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+
+	"path/filepath"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/repository"
 	"github.com/cli/go-gh/v2/pkg/term"
+	"github.com/kmtym1998/gh-issue-treefier/internal/cache"
 	"github.com/kmtym1998/gh-issue-treefier/internal/github"
 	"github.com/kmtym1998/gh-issue-treefier/internal/server"
 	"github.com/kmtym1998/gh-issue-treefier/internal/util"
@@ -32,6 +37,7 @@ func newConsoleCmd() *cobra.Command {
 
 	cmd.Flags().Int("port", 7000, "Port to listen on")
 	cmd.Flags().StringP("repo", "R", "", "Repository in OWNER/REPO format")
+	cmd.Flags().StringP("project-id", "p", "", "Project ID (skips interactive selection)")
 	cmd.Flags().Bool("no-browser", false, "Do not open the browser automatically")
 
 	return cmd
@@ -42,9 +48,18 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read port flag: %w", err)
 	}
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		if p, err := strconv.Atoi(envPort); err == nil {
+			port = p
+		}
+	}
 	repoOverride, err := cmd.Flags().GetString("repo")
 	if err != nil {
 		return fmt.Errorf("failed to read repo flag: %w", err)
+	}
+	projectID, err := cmd.Flags().GetString("project-id")
+	if err != nil {
+		return fmt.Errorf("failed to read project-id flag: %w", err)
 	}
 	noBrowser, err := cmd.Flags().GetBool("no-browser")
 	if err != nil {
@@ -57,18 +72,27 @@ func runConsole(cmd *cobra.Command, _ []string) error {
 	}
 	actualPort := ln.Addr().(*net.TCPAddr).Port
 
-	srv := server.New(actualPort)
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+	cacheDir := filepath.Join(homeDir, ".cache", "gh-issue-treefier")
+	cacheStore := cache.NewStore(cacheDir)
+	cacheStore.Start(5 * time.Second)
+	defer cacheStore.Stop()
+
+	srv := server.New(actualPort, cacheStore)
 
 	repo, err := resolveRepo(repoOverride)
 	if err != nil {
 		return err
 	}
 
-	openURL, err := buildURL(actualPort, repo)
+	openURL, err := buildURL(actualPort, repo, projectID)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Starting server on http://localhost:%d\n", actualPort)
+	fmt.Printf("Starting server on %s\n", openURL)
 
 	if !noBrowser {
 		if err := util.OpenBrowser(openURL); err != nil {
@@ -118,10 +142,15 @@ func resolveRepo(repoOverride string) (repository.Repository, error) {
 	return repository.Repository{Owner: parts[0], Name: parts[1]}, nil
 }
 
-func buildURL(port int, repo repository.Repository) (string, error) {
+func buildURL(port int, repo repository.Repository, projectID string) (string, error) {
 	u := fmt.Sprintf("http://localhost:%d", port)
 	q := url.Values{}
 	q.Set("owner", repo.Owner)
+
+	if projectID != "" {
+		q.Set("project_id", projectID)
+		return u + "?" + q.Encode(), nil
+	}
 
 	term := term.FromEnv()
 	in, ok := term.In().(*os.File)

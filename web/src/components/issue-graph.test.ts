@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Dependency, Issue } from "../types/issue";
-import { dependenciesToEdges, issuesToNodes, layoutNodes } from "./issue-graph";
+import {
+  dependenciesToEdges,
+  getAncestorIds,
+  getDescendantIds,
+  issuesToNodes,
+  layoutNodes,
+} from "./issue-graph";
 
 const sampleIssues: Issue[] = [
   {
@@ -164,10 +170,10 @@ describe("dependenciesToEdges", () => {
 });
 
 describe("layoutNodes", () => {
-  it("assigns positions to nodes", () => {
+  it("assigns positions to nodes", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges);
+    const layouted = await layoutNodes(nodes, edges);
 
     expect(layouted).toHaveLength(3);
     for (const node of layouted) {
@@ -178,10 +184,10 @@ describe("layoutNodes", () => {
     }
   });
 
-  it("sets TB direction positions correctly", () => {
+  it("sets TB direction positions correctly", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges, "TB");
+    const layouted = await layoutNodes(nodes, edges, "TB");
 
     const nodeMap = Object.fromEntries(layouted.map((n) => [n.id, n]));
 
@@ -196,24 +202,25 @@ describe("layoutNodes", () => {
     );
   });
 
-  it("sets LR direction positions correctly", () => {
+  it("sets LR direction positions correctly", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges, "LR");
+    const layouted = await layoutNodes(nodes, edges, "LR");
 
     const nodeMap = Object.fromEntries(layouted.map((n) => [n.id, n]));
 
     expect(nodeMap["owner/repo#1"]).toBeDefined();
     expect(nodeMap["owner/repo#2"]).toBeDefined();
-    expect(nodeMap["owner/repo#1"].position.x).toBeLessThan(
+    // wrapping が効く場合、親ノードの x が子と同じになることがあるため <=
+    expect(nodeMap["owner/repo#1"].position.x).toBeLessThanOrEqual(
       nodeMap["owner/repo#2"].position.x,
     );
   });
 
-  it("sets sourcePosition and targetPosition for TB direction", () => {
+  it("sets sourcePosition and targetPosition for TB direction", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges, "TB");
+    const layouted = await layoutNodes(nodes, edges, "TB");
 
     for (const node of layouted) {
       expect(node.targetPosition).toBe("top");
@@ -221,10 +228,10 @@ describe("layoutNodes", () => {
     }
   });
 
-  it("sets sourcePosition and targetPosition for LR direction", () => {
+  it("sets sourcePosition and targetPosition for LR direction", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
-    const layouted = layoutNodes(nodes, edges, "LR");
+    const layouted = await layoutNodes(nodes, edges, "LR");
 
     for (const node of layouted) {
       expect(node.targetPosition).toBe("left");
@@ -232,21 +239,21 @@ describe("layoutNodes", () => {
     }
   });
 
-  it("does not mutate original nodes", () => {
+  it("does not mutate original nodes", async () => {
     const nodes = issuesToNodes(sampleIssues);
     const edges = dependenciesToEdges(sampleDependencies);
     const originalPositions = nodes.map((n) => ({ ...n.position }));
 
-    layoutNodes(nodes, edges);
+    await layoutNodes(nodes, edges);
 
     nodes.forEach((node, i) => {
       expect(node.position).toEqual(originalPositions[i]);
     });
   });
 
-  it("handles nodes without edges", () => {
+  it("handles nodes without edges", async () => {
     const nodes = issuesToNodes(sampleIssues);
-    const layouted = layoutNodes(nodes, []);
+    const layouted = await layoutNodes(nodes, []);
 
     expect(layouted).toHaveLength(3);
     for (const node of layouted) {
@@ -255,7 +262,75 @@ describe("layoutNodes", () => {
     }
   });
 
-  it("handles empty input", () => {
-    expect(layoutNodes([], [])).toEqual([]);
+  it("handles empty input", async () => {
+    expect(await layoutNodes([], [])).toEqual([]);
+  });
+});
+
+describe("getDescendantIds", () => {
+  const edges = dependenciesToEdges([
+    { source: "a", target: "b", type: "sub_issue" },
+    { source: "a", target: "c", type: "sub_issue" },
+    { source: "b", target: "d", type: "sub_issue" },
+    { source: "c", target: "e", type: "blocked_by" },
+  ]);
+
+  it("returns all descendants recursively", () => {
+    const result = getDescendantIds("a", edges);
+    expect(result).toEqual(new Set(["b", "c", "d", "e"]));
+  });
+
+  it("returns partial descendants from mid-tree node", () => {
+    const result = getDescendantIds("b", edges);
+    expect(result).toEqual(new Set(["d"]));
+  });
+
+  it("returns empty set for leaf node", () => {
+    const result = getDescendantIds("d", edges);
+    expect(result).toEqual(new Set());
+  });
+
+  it("returns empty set for unknown node", () => {
+    const result = getDescendantIds("unknown", edges);
+    expect(result).toEqual(new Set());
+  });
+
+  it("follows blocked_by edges as well", () => {
+    const result = getDescendantIds("c", edges);
+    expect(result).toEqual(new Set(["e"]));
+  });
+});
+
+describe("getAncestorIds", () => {
+  const edges = dependenciesToEdges([
+    { source: "a", target: "b", type: "sub_issue" },
+    { source: "a", target: "c", type: "sub_issue" },
+    { source: "b", target: "d", type: "sub_issue" },
+    { source: "c", target: "d", type: "blocked_by" },
+  ]);
+
+  it("returns all ancestors recursively", () => {
+    const result = getAncestorIds("d", edges);
+    expect(result).toEqual(new Set(["a", "b", "c"]));
+  });
+
+  it("returns direct parent only for shallow node", () => {
+    const result = getAncestorIds("b", edges);
+    expect(result).toEqual(new Set(["a"]));
+  });
+
+  it("returns empty set for root node", () => {
+    const result = getAncestorIds("a", edges);
+    expect(result).toEqual(new Set());
+  });
+
+  it("returns empty set for unknown node", () => {
+    const result = getAncestorIds("unknown", edges);
+    expect(result).toEqual(new Set());
+  });
+
+  it("follows blocked_by edges in reverse", () => {
+    const result = getAncestorIds("d", edges);
+    expect(result.has("c")).toBe(true);
   });
 });

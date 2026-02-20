@@ -65,3 +65,44 @@ export function graphql<T = unknown>(
     body: JSON.stringify({ query, variables }),
   });
 }
+
+export interface CacheData {
+  items: unknown[] | null;
+  nodePositions: Record<string, { x: number; y: number }>;
+}
+
+export function cacheFlush(): Promise<void> {
+  return request<void>("/api/cache/flush", { method: "POST" });
+}
+
+export function cacheGet(projectId: string): Promise<CacheData> {
+  return request<CacheData>(`/api/cache/${projectId}`);
+}
+
+export function cachePutItems(
+  projectId: string,
+  items: unknown[],
+): Promise<void> {
+  return request<void>(`/api/cache/${projectId}/items`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(items),
+  });
+}
+
+export function cacheDeleteItems(projectId: string): Promise<void> {
+  return request<void>(`/api/cache/${projectId}/items`, {
+    method: "DELETE",
+  });
+}
+
+export function cachePutNodePositions(
+  projectId: string,
+  positions: Record<string, { x: number; y: number }>,
+): Promise<void> {
+  return request<void>(`/api/cache/${projectId}/node-positions`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(positions),
+  });
+}

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cacheFlush } from "../api-client";
 import { useFilterQueryParams } from "../hooks/use-filter-query-params";
 import { useIssueMutations } from "../hooks/use-issue-mutations";
 import { buildIssueId, useProjectIssues } from "../hooks/use-project-issues";
@@ -18,8 +19,39 @@ export function IssueDashboard() {
     ...initialFilters,
   });
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
-  const [graphDependencies, setGraphDependencies] = useState<Dependency[]>([]);
+  const [optimisticOps, setOptimisticOps] = useState<{
+    added: Dependency[];
+    removed: Dependency[];
+  }>({ added: [], removed: [] });
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [isFlushing, setIsFlushing] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+  const flushingRef = useRef(false);
+  const handleFlush = useCallback(async () => {
+    if (flushingRef.current) return;
+    flushingRef.current = true;
+    setIsFlushing(true);
+    try {
+      await cacheFlush();
+      setLastSavedAt(new Date());
+    } finally {
+      setIsFlushing(false);
+      flushingRef.current = false;
+    }
+  }, []);
+
+  // Cmd+S / Ctrl+S でインメモリキャッシュをディスクに保存
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleFlush();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleFlush]);
 
   const handleFilterChange = useCallback(
     (next: FilterValues) => {
@@ -30,35 +62,65 @@ export function IssueDashboard() {
     [syncToUrl],
   );
 
-  const { issues, dependencies, loading, error } = useProjectIssues({
-    ...filters,
-  });
+  const { issues, dependencies, loading, isRevalidating, error } =
+    useProjectIssues({
+      ...filters,
+    });
 
-  const mutations = useIssueMutations();
-
-  useEffect(() => {
-    setGraphDependencies(dependencies);
-  }, [dependencies]);
+  const mutations = useIssueMutations(filters.projectId);
 
   const depKey = useCallback(
     (dep: Dependency) => `${dep.type}:${dep.source}->${dep.target}`,
     [],
   );
 
+  // サーバーデータ (dependencies) + 楽観的更新 (optimisticOps) から同期的に導出。
+  // useEffect 経由の非同期同期だと初回レンダーで dependencies=[] になりレイアウトが壊れる。
+  const graphDependencies = useMemo(() => {
+    let result = [...dependencies];
+    for (const dep of optimisticOps.added) {
+      if (!result.some((d) => depKey(d) === depKey(dep))) {
+        result.push(dep);
+      }
+    }
+    result = result.filter(
+      (d) => !optimisticOps.removed.some((r) => depKey(r) === depKey(d)),
+    );
+    return result;
+  }, [dependencies, optimisticOps, depKey]);
+
+  // サーバーデータが更新されたら確認済みの楽観的更新をクリア
+  useEffect(() => {
+    setOptimisticOps((prev) => ({
+      added: prev.added.filter(
+        (a) => !dependencies.some((d) => depKey(d) === depKey(a)),
+      ),
+      removed: prev.removed.filter((r) =>
+        dependencies.some((d) => depKey(d) === depKey(r)),
+      ),
+    }));
+  }, [dependencies, depKey]);
+
   const addDependency = useCallback(
     (dep: Dependency) => {
-      setGraphDependencies((prev) =>
-        prev.some((d) => depKey(d) === depKey(dep)) ? prev : [...prev, dep],
-      );
+      setOptimisticOps((prev) => ({
+        added: prev.added.some((a) => depKey(a) === depKey(dep))
+          ? prev.added
+          : [...prev.added, dep],
+        removed: prev.removed.filter((r) => depKey(r) !== depKey(dep)),
+      }));
     },
     [depKey],
   );
 
   const removeDependency = useCallback(
     (dep: Dependency) => {
-      setGraphDependencies((prev) =>
-        prev.filter((d) => depKey(d) !== depKey(dep)),
-      );
+      setOptimisticOps((prev) => ({
+        added: prev.added.filter((a) => depKey(a) !== depKey(dep)),
+        removed: prev.removed.some((r) => depKey(r) === depKey(dep))
+          ? prev.removed
+          : [...prev.removed, dep],
+      }));
     },
     [depKey],
   );
@@ -243,18 +305,32 @@ export function IssueDashboard() {
           )}
 
           {hasQuery && !loading && issues.length > 0 && (
-            <IssueGraph
-              issues={issues}
-              dependencies={graphDependencies}
-              onNodeClick={setSelectedIssueId}
-              onEdgeDelete={handleEdgeDelete}
-              onEdgeAdd={handleEdgeAdd}
-            />
+            <>
+              {isRevalidating && (
+                <span style={styles.revalidating}>更新中...</span>
+              )}
+              <IssueGraph
+                issues={issues}
+                dependencies={graphDependencies}
+                projectId={filters.projectId}
+                onNodeClick={setSelectedIssueId}
+                onEdgeDelete={handleEdgeDelete}
+                onEdgeAdd={handleEdgeAdd}
+              />
+            </>
           )}
 
           {hasQuery && !loading && mutationError && (
             <p style={styles.error}>{mutationError}</p>
           )}
+
+          <div style={styles.saveStatus}>
+            {isFlushing ? (
+              <span>保存中...</span>
+            ) : lastSavedAt ? (
+              <span>最終保存: {lastSavedAt.toLocaleTimeString()}</span>
+            ) : null}
+          </div>
         </div>
 
         <IssueDetail
@@ -286,6 +362,14 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
   },
+  revalidating: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    color: "#656d76",
+    fontSize: 12,
+  },
   placeholder: {
     color: "#656d76",
     fontSize: 14,
@@ -293,5 +377,13 @@ const styles: Record<string, React.CSSProperties> = {
   error: {
     color: "#cf222e",
     fontSize: 14,
+  },
+  saveStatus: {
+    position: "absolute",
+    bottom: 8,
+    left: 12,
+    zIndex: 10,
+    color: "#656d76",
+    fontSize: 12,
   },
 };

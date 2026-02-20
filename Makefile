@@ -17,13 +17,13 @@ build-go:
 
 # 開発（フロント + Go を並列起動）
 dev:
-	$(MAKE) dev-web & $(MAKE) dev-go & wait
+	$(MAKE) dev-web & $(MAKE) dev-api & wait
 
 dev-web:
 	cd web && npm run dev
 
-dev-go:
-	go run ./cmd/gh-issue-treefier console
+dev-api:
+	PORT=7777 go run ./cmd/gh-issue-treefier console --no-browser
 
 # リント・フォーマット
 lint:
