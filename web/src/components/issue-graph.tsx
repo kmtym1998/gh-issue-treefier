@@ -346,35 +346,51 @@ function IssueGraphReady({
   );
 
   const [selectedCount, setSelectedCount] = useState(0);
-  const [singleSelectedId, setSingleSelectedId] = useState<string | null>(null);
 
   const handleSelectionChange = useCallback(
     ({ nodes: selected }: { nodes: Node[] }) => {
       setSelectedCount(selected.length);
       if (selected.length === 1) {
-        setSingleSelectedId(selected[0].id);
         onNodeClick?.(selected[0].id);
       } else {
-        setSingleSelectedId(null);
         onNodeClick?.(null);
       }
     },
     [onNodeClick],
   );
 
+  // --- コンテキストメニュー ---
+  const [contextMenu, setContextMenu] = useState<{
+    nodeId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
+    },
+    [],
+  );
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
   const handleSelectDescendants = useCallback(() => {
-    if (!singleSelectedId) return;
-    const ids = getDescendantIds(singleSelectedId, edges);
-    ids.add(singleSelectedId);
+    if (!contextMenu) return;
+    const ids = getDescendantIds(contextMenu.nodeId, edges);
+    ids.add(contextMenu.nodeId);
     setNodes((prev) => prev.map((n) => ({ ...n, selected: ids.has(n.id) })));
-  }, [singleSelectedId, edges, setNodes]);
+    setContextMenu(null);
+  }, [contextMenu, edges, setNodes]);
 
   const handleSelectAncestors = useCallback(() => {
-    if (!singleSelectedId) return;
-    const ids = getAncestorIds(singleSelectedId, edges);
-    ids.add(singleSelectedId);
+    if (!contextMenu) return;
+    const ids = getAncestorIds(contextMenu.nodeId, edges);
+    ids.add(contextMenu.nodeId);
     setNodes((prev) => prev.map((n) => ({ ...n, selected: ids.has(n.id) })));
-  }, [singleSelectedId, edges, setNodes]);
+    setContextMenu(null);
+  }, [contextMenu, edges, setNodes]);
 
   const handleEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
@@ -431,24 +447,6 @@ function IssueGraphReady({
           Blocked By
         </button>
       </div>
-      {singleSelectedId && (
-        <div style={graphStyles.selectionActions}>
-          <button
-            type="button"
-            style={graphStyles.selectionActionButton}
-            onClick={handleSelectDescendants}
-          >
-            Select Descendants
-          </button>
-          <button
-            type="button"
-            style={graphStyles.selectionActionButton}
-            onClick={handleSelectAncestors}
-          >
-            Select Ancestors
-          </button>
-        </div>
-      )}
       {selectedCount >= 2 && (
         <div style={graphStyles.selectionBadge}>
           {selectedCount} nodes selected
@@ -460,6 +458,8 @@ function IssueGraphReady({
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onSelectionChange={handleSelectionChange}
+        onNodeContextMenu={handleNodeContextMenu}
+        onPaneClick={closeContextMenu}
         onEdgeClick={handleEdgeClick}
         onConnect={handleConnect}
         connectionLineStyle={connectionLineStyle}
@@ -472,6 +472,30 @@ function IssueGraphReady({
       >
         <Background />
       </ReactFlow>
+      {contextMenu && (
+        <div
+          style={{
+            ...graphStyles.contextMenu,
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+        >
+          <button
+            type="button"
+            style={graphStyles.contextMenuItem}
+            onClick={handleSelectDescendants}
+          >
+            Select Descendants
+          </button>
+          <button
+            type="button"
+            style={graphStyles.contextMenuItem}
+            onClick={handleSelectAncestors}
+          >
+            Select Ancestors
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -515,22 +539,25 @@ const graphStyles: Record<string, React.CSSProperties> = {
     color: "#fff",
     borderColor: "#cf222e",
   },
-  selectionActions: {
-    position: "absolute",
-    top: 40,
-    left: 0,
-    zIndex: 10,
-    display: "flex",
-    gap: 4,
-    padding: "0 12px",
-  },
-  selectionActionButton: {
-    padding: "3px 10px",
-    fontSize: 11,
-    border: "1px solid #d0d7de",
-    borderRadius: 4,
+  contextMenu: {
+    position: "fixed",
+    zIndex: 1000,
     background: "#fff",
+    border: "1px solid #d0d7de",
+    borderRadius: 6,
+    boxShadow: "0 3px 12px rgba(0,0,0,0.15)",
+    padding: "4px 0",
+    minWidth: 160,
+  },
+  contextMenuItem: {
+    display: "block",
+    width: "100%",
+    padding: "6px 12px",
+    fontSize: 12,
+    border: "none",
+    background: "none",
     cursor: "pointer",
     color: "#24292f",
+    textAlign: "left",
   },
 };
