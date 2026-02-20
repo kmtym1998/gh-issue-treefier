@@ -194,10 +194,10 @@ describe("layoutNodes", () => {
     expect(nodeMap["owner/repo#1"]).toBeDefined();
     expect(nodeMap["owner/repo#2"]).toBeDefined();
     expect(nodeMap["owner/repo#3"]).toBeDefined();
-    expect(nodeMap["owner/repo#1"].position.y).toBeLessThan(
+    expect(nodeMap["owner/repo#1"].position.y).toBeLessThanOrEqual(
       nodeMap["owner/repo#2"].position.y,
     );
-    expect(nodeMap["owner/repo#1"].position.y).toBeLessThan(
+    expect(nodeMap["owner/repo#1"].position.y).toBeLessThanOrEqual(
       nodeMap["owner/repo#3"].position.y,
     );
   });

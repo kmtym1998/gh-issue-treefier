@@ -169,9 +169,10 @@ export async function layoutNodes(
       "elk.algorithm": "layered",
       "elk.direction": isHorizontal ? "RIGHT" : "DOWN",
       "elk.spacing.nodeNode": "30",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "120",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "320",
       "elk.layered.wrapping.strategy": "MULTI_EDGE",
-      "elk.aspectRatio": "1.6",
+      "elk.aspectRatio": "1.0",
+      "elk.layered.wrapping.correctionFactor": "1.0",
       "elk.layered.compaction.postCompaction.strategy": "EDGE_LENGTH",
       "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
     },
@@ -392,6 +393,50 @@ function IssueGraphReady({
     setContextMenu(null);
   }, [contextMenu, edges, setNodes]);
 
+  const handleLayoutSelected = useCallback(async () => {
+    if (!contextMenu) return;
+    setContextMenu(null);
+
+    // 選択中ノードが2つ以上あり、右クリックしたノードが選択に含まれていれば
+    // 選択ノード群を対象にする。それ以外は右クリックノード＋子孫を対象にする。
+    const selectedNodes = nodes.filter((n) => n.selected);
+    const isClickedNodeSelected = selectedNodes.some(
+      (n) => n.id === contextMenu.nodeId,
+    );
+    let targetIds: Set<string>;
+    if (selectedNodes.length >= 2 && isClickedNodeSelected) {
+      targetIds = new Set(selectedNodes.map((n) => n.id));
+    } else {
+      targetIds = getDescendantIds(contextMenu.nodeId, edges);
+      targetIds.add(contextMenu.nodeId);
+    }
+
+    const targetNodes = nodes.filter((n) => targetIds.has(n.id));
+    if (targetNodes.length < 2) return;
+
+    const subEdges = edges.filter(
+      (e) => targetIds.has(e.source) && targetIds.has(e.target),
+    );
+
+    // 元の左上を基準オフセットとして保持
+    const originX = Math.min(...targetNodes.map((n) => n.position.x));
+    const originY = Math.min(...targetNodes.map((n) => n.position.y));
+
+    const layouted = await layoutNodes(targetNodes, subEdges);
+
+    const posMap = new Map(layouted.map((n) => [n.id, n.position]));
+    setNodes((prev) =>
+      prev.map((n) => {
+        const newPos = posMap.get(n.id);
+        if (!newPos) return n;
+        return {
+          ...n,
+          position: { x: newPos.x + originX, y: newPos.y + originY },
+        };
+      }),
+    );
+  }, [contextMenu, nodes, edges, setNodes]);
+
   const handleEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
       if (!onEdgeDelete) return;
@@ -494,6 +539,14 @@ function IssueGraphReady({
           >
             Select Ancestors
           </button>
+          <div style={graphStyles.contextMenuDivider} />
+          <button
+            type="button"
+            style={graphStyles.contextMenuItem}
+            onClick={handleLayoutSelected}
+          >
+            Layout Selected
+          </button>
         </div>
       )}
     </div>
@@ -559,5 +612,10 @@ const graphStyles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     color: "#24292f",
     textAlign: "left",
+  },
+  contextMenuDivider: {
+    height: 1,
+    margin: "4px 0",
+    background: "#d0d7de",
   },
 };
