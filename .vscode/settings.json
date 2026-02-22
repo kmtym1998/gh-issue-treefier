@@ -41,5 +41,9 @@
     "titleBar.inactiveBackground": "#44444499",
     "titleBar.inactiveForeground": "#e7e7e799"
   },
-  "peacock.color": "#444444"
+  "peacock.color": "#444444",
+  "chat.tools.terminal.autoApprove": {
+    "npx vitest": true,
+    "npx biome": true
+  }
 }

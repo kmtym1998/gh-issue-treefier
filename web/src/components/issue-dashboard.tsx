@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cacheFlush } from "../api-client";
 import { useFilterQueryParams } from "../hooks/use-filter-query-params";
 import { useIssueMutations } from "../hooks/use-issue-mutations";
+import { useOptimisticIssues } from "../hooks/use-optimistic-issues";
+import { usePendingNodePositions } from "../hooks/use-pending-node-positions";
 import { buildIssueId, useProjectIssues } from "../hooks/use-project-issues";
 import { useProjectFields } from "../hooks/use-projects";
-import { getNodePositions, setNodePositions } from "../lib/cache";
-import type { Dependency, DependencyType } from "../types/issue";
+import type { Dependency, DependencyType, Issue } from "../types/issue";
 import { FilterPanel, type FilterValues } from "./filter-panel";
 import { IssueCreateForm } from "./issue-create-form";
 import { IssueDetail } from "./issue-detail";
@@ -26,8 +27,7 @@ export function IssueDashboard() {
   const [panelMode, setPanelMode] = useState<
     "create-issue" | "search-issue" | "search-pr" | null
   >(null);
-  const pendingNodePositionRef = useRef<{ x: number; y: number } | null>(null);
-  const prevIssueIdsRef = useRef(new Set<string>());
+
   const [optimisticOps, setOptimisticOps] = useState<{
     added: Dependency[];
     removed: Dependency[];
@@ -80,33 +80,17 @@ export function IssueDashboard() {
 
   const mutations = useIssueMutations(filters.projectId);
 
-  // 新規追加ノードの位置を右クリック位置に設定する
-  useEffect(() => {
-    const currentIds = new Set(issues.map((i) => i.id));
-    const pending = pendingNodePositionRef.current;
-
-    if (pending && prevIssueIdsRef.current.size > 0) {
-      const newIds = [...currentIds].filter(
-        (id) => !prevIssueIdsRef.current.has(id),
-      );
-      if (newIds.length > 0) {
-        getNodePositions(filters.projectId).then((saved) => {
-          const positions = { ...(saved?.positions ?? {}) };
-          for (const id of newIds) {
-            positions[id] = pending;
-          }
-          setNodePositions(filters.projectId, positions);
-        });
-        pendingNodePositionRef.current = null;
-      }
-    }
-
-    prevIssueIdsRef.current = currentIds;
-  }, [issues, filters.projectId]);
+  const { allIssues, addOptimisticIssue } = useOptimisticIssues(issues);
+  const {
+    pendingNodePositions,
+    reservePosition,
+    assignReservedPosition,
+    clearReservedPosition,
+  } = usePendingNodePositions(filters.projectId, allIssues);
 
   const repos = useMemo(
-    () => [...new Set(issues.map((i) => `${i.owner}/${i.repo}`))],
-    [issues],
+    () => [...new Set(allIssues.map((i) => `${i.owner}/${i.repo}`))],
+    [allIssues],
   );
 
   const depKey = useCallback(
@@ -317,37 +301,56 @@ export function IssueDashboard() {
     setPanelMode(null);
   }, []);
 
-  const handleCreateIssue = useCallback((flowPos: { x: number; y: number }) => {
-    pendingNodePositionRef.current = flowPos;
-    setSelectedIssueId(null);
-    setPanelMode("create-issue");
-  }, []);
+  const handleCreateIssue = useCallback(
+    (flowPos: { x: number; y: number }) => {
+      reservePosition(flowPos);
+      setSelectedIssueId(null);
+      setPanelMode("create-issue");
+    },
+    [reservePosition],
+  );
 
-  const handleAddIssue = useCallback((flowPos: { x: number; y: number }) => {
-    pendingNodePositionRef.current = flowPos;
-    setSelectedIssueId(null);
-    setPanelMode("search-issue");
-  }, []);
+  const handleAddIssue = useCallback(
+    (flowPos: { x: number; y: number }) => {
+      reservePosition(flowPos);
+      setSelectedIssueId(null);
+      setPanelMode("search-issue");
+    },
+    [reservePosition],
+  );
 
-  const handleAddPR = useCallback((flowPos: { x: number; y: number }) => {
-    pendingNodePositionRef.current = flowPos;
-    setSelectedIssueId(null);
-    setPanelMode("search-pr");
-  }, []);
+  const handleAddPR = useCallback(
+    (flowPos: { x: number; y: number }) => {
+      reservePosition(flowPos);
+      setSelectedIssueId(null);
+      setPanelMode("search-pr");
+    },
+    [reservePosition],
+  );
 
-  const handleFormSuccess = useCallback(() => {
+  const handleCreateIssueSuccess = useCallback(
+    (issue: Issue) => {
+      assignReservedPosition(issue.id);
+      addOptimisticIssue(issue);
+      setPanelMode(null);
+      refetch();
+    },
+    [assignReservedPosition, addOptimisticIssue, refetch],
+  );
+
+  const handleSearchFormSuccess = useCallback(() => {
     refetch();
     setPanelMode(null);
   }, [refetch]);
 
   const handleFormClose = useCallback(() => {
     setPanelMode(null);
-    pendingNodePositionRef.current = null;
-  }, []);
+    clearReservedPosition();
+  }, [clearReservedPosition]);
 
   const selectedIssue = useMemo(
-    () => issues.find((i) => i.id === selectedIssueId) ?? null,
-    [issues, selectedIssueId],
+    () => allIssues.find((i) => i.id === selectedIssueId) ?? null,
+    [allIssues, selectedIssueId],
   );
 
   const hasQuery = filters.owner !== "" && filters.projectId !== "";
@@ -373,19 +376,20 @@ export function IssueDashboard() {
             <p style={styles.error}>Error: {error.message}</p>
           )}
 
-          {hasQuery && !loading && !error && issues.length === 0 && (
+          {hasQuery && !loading && !error && allIssues.length === 0 && (
             <p style={styles.placeholder}>Issue が見つかりませんでした</p>
           )}
 
-          {hasQuery && !loading && issues.length > 0 && (
+          {hasQuery && !loading && allIssues.length > 0 && (
             <>
               {isRevalidating && (
                 <span style={styles.revalidating}>更新中...</span>
               )}
               <IssueGraph
-                issues={issues}
+                issues={allIssues}
                 dependencies={graphDependencies}
                 projectId={filters.projectId}
+                pendingNodePositions={pendingNodePositions}
                 onNodeClick={handleNodeClick}
                 onEdgeDelete={handleEdgeDelete}
                 onEdgeAdd={handleEdgeAdd}
@@ -414,7 +418,7 @@ export function IssueDashboard() {
             repos={repos}
             projectId={filters.projectId}
             projectFields={projectFields}
-            onSuccess={handleFormSuccess}
+            onSuccess={handleCreateIssueSuccess}
             onClose={handleFormClose}
           />
         )}
@@ -423,7 +427,7 @@ export function IssueDashboard() {
             type="issue"
             owner={filters.owner}
             projectId={filters.projectId}
-            onSuccess={handleFormSuccess}
+            onSuccess={handleSearchFormSuccess}
             onClose={handleFormClose}
           />
         )}
@@ -432,7 +436,7 @@ export function IssueDashboard() {
             type="pr"
             owner={filters.owner}
             projectId={filters.projectId}
-            onSuccess={handleFormSuccess}
+            onSuccess={handleSearchFormSuccess}
             onClose={handleFormClose}
           />
         )}

@@ -14,15 +14,16 @@ import {
 } from "@mui/material";
 import { useCallback, useState } from "react";
 import { useIssueCreation } from "../hooks/use-issue-creation";
+import { buildIssueId } from "../hooks/use-project-issues";
 import { useProjectMutations } from "../hooks/use-project-mutations";
-import type { IssueTemplate } from "../types/issue";
+import type { Issue, IssueTemplate } from "../types/issue";
 import type { ProjectField } from "../types/project";
 
 export interface IssueCreateFormProps {
   repos: string[];
   projectId: string;
   projectFields: ProjectField[];
-  onSuccess: () => void;
+  onSuccess: (issue: Issue) => void;
   onClose: () => void;
 }
 
@@ -98,6 +99,8 @@ export function IssueCreateForm({
       setError(null);
 
       let createdNodeId: string;
+      let createdNumber: number;
+      let createdUrl: string;
       try {
         const created = await createIssue({
           owner,
@@ -107,6 +110,8 @@ export function IssueCreateForm({
           assignees: assignees.length > 0 ? assignees : undefined,
         });
         createdNodeId = created.node_id;
+        createdNumber = created.number;
+        createdUrl = created.html_url;
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Issue の作成に失敗しました",
@@ -142,7 +147,18 @@ export function IssueCreateForm({
       }
 
       setSubmitting(false);
-      onSuccess();
+      onSuccess({
+        id: buildIssueId(owner, repo, createdNumber),
+        number: createdNumber,
+        owner,
+        repo,
+        title: title.trim(),
+        state: "open",
+        body: body || "",
+        labels: [],
+        assignees: assignees.map((a) => ({ login: a, avatarUrl: "" })),
+        url: createdUrl,
+      });
     },
     [
       repoInputValue,

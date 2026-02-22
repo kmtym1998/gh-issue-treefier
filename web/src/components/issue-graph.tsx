@@ -219,6 +219,7 @@ export interface IssueGraphProps {
   issues: Issue[];
   dependencies: Dependency[];
   projectId: string;
+  pendingNodePositions?: Record<string, { x: number; y: number }>;
   onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
   onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
@@ -228,22 +229,14 @@ export interface IssueGraphProps {
 }
 
 export function IssueGraph(props: IssueGraphProps) {
-  // issue の集合が変わったときだけリマウントし、ELK レイアウトを再計算する。
-  // エッジの変更ではリマウントせず、ReactFlow の edges prop 更新だけで反映する。
-  const issueKey = useMemo(() => {
-    return props.issues
-      .map((i) => i.id)
-      .sort()
-      .join(",");
-  }, [props.issues]);
-
-  return <IssueGraphInner key={issueKey} {...props} />;
+  return <IssueGraphInner {...props} />;
 }
 
 function IssueGraphInner({
   issues,
   dependencies,
   projectId,
+  pendingNodePositions,
   onNodeClick,
   onEdgeDelete,
   onEdgeAdd,
@@ -253,14 +246,16 @@ function IssueGraphInner({
 }: IssueGraphProps) {
   const [layoutedNodes, setLayoutedNodes] = useState<Node[] | null>(null);
 
-  // マウント時の dependencies でレイアウトを計算する。
-  // エッジの追加/削除ではレイアウトを再計算しない（edges の useMemo 更新のみ）。
-  const initialDepsRef = useRef(dependencies);
+  const initializedProjectIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!projectId || issues.length === 0) return;
+    if (initializedProjectIdRef.current === projectId && layoutedNodes) return;
+
     let cancelled = false;
     const nodes = issuesToNodes(issues);
-    const edges = dependenciesToEdges(initialDepsRef.current);
+    const edges = dependenciesToEdges(dependencies);
+
     layoutNodes(nodes, edges).then(async (result) => {
       if (cancelled) return;
       const saved = await getNodePositions(projectId);
@@ -274,11 +269,13 @@ function IssueGraphInner({
       } else {
         setLayoutedNodes(result);
       }
+      initializedProjectIdRef.current = projectId;
     });
+
     return () => {
       cancelled = true;
     };
-  }, [issues, projectId]);
+  }, [issues, dependencies, projectId, layoutedNodes]);
 
   // エッジは dependencies から純粋に導出
   const edges = useMemo(
@@ -309,7 +306,9 @@ function IssueGraphInner({
       <IssueGraphReady
         projectId={projectId}
         initialNodes={layoutedNodes}
+        issues={issues}
         edges={edges}
+        pendingNodePositions={pendingNodePositions}
         onNodeClick={onNodeClick}
         onEdgeDelete={onEdgeDelete}
         onEdgeAdd={onEdgeAdd}
@@ -324,7 +323,9 @@ function IssueGraphInner({
 function IssueGraphReady({
   projectId,
   initialNodes,
+  issues,
   edges,
+  pendingNodePositions,
   onNodeClick,
   onEdgeDelete,
   onEdgeAdd,
@@ -334,7 +335,9 @@ function IssueGraphReady({
 }: {
   projectId: string;
   initialNodes: Node[];
+  issues: Issue[];
   edges: Edge[];
+  pendingNodePositions?: Record<string, { x: number; y: number }>;
   onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
   onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
@@ -346,6 +349,13 @@ function IssueGraphReady({
     useState<DependencyType>("sub_issue");
 
   const [nodes, setNodes, onNodesChangeOriginal] = useNodesState(initialNodes);
+  const prevProjectIdRef = useRef(projectId);
+
+  useEffect(() => {
+    if (prevProjectIdRef.current === projectId) return;
+    prevProjectIdRef.current = projectId;
+    setNodes(initialNodes);
+  }, [projectId, initialNodes, setNodes]);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nodesRef = useRef(nodes);
@@ -387,6 +397,49 @@ function IssueGraphReady({
   );
 
   const { screenToFlowPosition } = useReactFlow();
+
+  useEffect(() => {
+    let cancelled = false;
+    const issueNodes = issuesToNodes(issues);
+    const issueNodeMap = new Map(issueNodes.map((node) => [node.id, node]));
+
+    const apply = async () => {
+      const saved = await getNodePositions(projectId);
+      if (cancelled) return;
+      const savedPositions = saved?.positions ?? {};
+
+      setNodes((prev) => {
+        const next: Node[] = [];
+        const existingIds = new Set<string>();
+
+        for (const node of prev) {
+          const issueNode = issueNodeMap.get(node.id);
+          if (!issueNode) continue;
+          existingIds.add(node.id);
+          next.push({
+            ...node,
+            type: issueNode.type,
+            data: issueNode.data,
+          });
+        }
+
+        for (const node of issueNodes) {
+          if (existingIds.has(node.id)) continue;
+          const pendingPos = pendingNodePositions?.[node.id];
+          const savedPos = savedPositions[node.id];
+          const position = pendingPos ?? savedPos;
+          next.push(position ? { ...node, position } : node);
+        }
+
+        return next;
+      });
+    };
+
+    apply();
+    return () => {
+      cancelled = true;
+    };
+  }, [issues, pendingNodePositions, projectId, setNodes]);
 
   // --- ペインコンテキストメニュー（空白領域の右クリック） ---
   const [paneContextMenu, setPaneContextMenu] =

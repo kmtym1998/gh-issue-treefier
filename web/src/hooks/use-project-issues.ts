@@ -261,7 +261,9 @@ export const useProjectIssues = (
             if (!cancelled) setLoading(true);
           }
         } else {
-          if (!cancelled) setLoading(true);
+          // refetch() は既にデータが表示されている状態で呼ばれるため、
+          // loading ではなく isRevalidating を使ってグラフのアンマウントを防ぐ
+          if (!cancelled) setIsRevalidating(true);
         }
 
         // API からフェッチ
