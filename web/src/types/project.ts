@@ -21,4 +21,6 @@ export type ProjectFieldType =
 export interface ProjectFieldOption {
   id: string;
   name: string;
+  /** GitHub ProjectV2SingleSelectFieldOption の color enum 値 */
+  color?: string;
 }

@@ -50,7 +50,7 @@ export interface GitHubProjectV2FieldNode {
   id: string;
   name: string;
   dataType: string;
-  options?: Array<{ id: string; name: string }>;
+  options?: Array<{ id: string; name: string; color?: string }>;
   configuration?: {
     iterations?: Array<{ id: string; title: string }>;
   };

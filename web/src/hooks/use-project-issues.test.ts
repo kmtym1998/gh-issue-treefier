@@ -144,7 +144,7 @@ describe("useProjectIssues", () => {
     });
 
     expect(result.current.issues).toEqual([
-      {
+      expect.objectContaining({
         id: "owner/repo#1",
         number: 1,
         owner: "owner",
@@ -157,7 +157,7 @@ describe("useProjectIssues", () => {
           { login: "alice", avatarUrl: "https://example.com/alice.png" },
         ],
         url: "https://github.com/owner/repo/issues/1",
-      },
+      }),
     ]);
     expect(result.current.error).toBeNull();
   });

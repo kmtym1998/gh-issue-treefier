@@ -172,6 +172,7 @@ export function IssueCreateForm({
           labels: [],
           assignees: assignees.map((a) => ({ login: a, avatarUrl: "" })),
           url: createdUrl,
+          fieldValues: {},
         },
         continueCreating,
       );

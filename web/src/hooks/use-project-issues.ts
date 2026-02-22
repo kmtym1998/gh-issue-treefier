@@ -113,6 +113,12 @@ const parseProjectItems = (items: GitHubProjectV2Item[]): Issue[] =>
       const c = item.content;
       const owner = c.repository.owner.login;
       const repo = c.repository.name;
+      const fieldValues: Record<string, string> = {};
+      for (const fv of item.fieldValues.nodes) {
+        if (!fv.field?.id) continue;
+        const value = fv.optionId ?? fv.iterationId;
+        if (value) fieldValues[fv.field.id] = value;
+      }
       return {
         id: buildIssueId(owner, repo, c.number),
         number: c.number,
@@ -127,6 +133,7 @@ const parseProjectItems = (items: GitHubProjectV2Item[]): Issue[] =>
           avatarUrl: a.avatarUrl,
         })),
         url: c.url,
+        fieldValues,
       };
     });
 

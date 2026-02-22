@@ -12,7 +12,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: "800px", height: "500px" }}>
+      <div style={{ width: "100%", height: "800px" }}>
         <Story />
       </div>
     ),
@@ -34,6 +34,7 @@ const issues: Issue[] = [
     labels: [{ name: "epic", color: "0075ca" }],
     assignees: [{ login: "alice", avatarUrl: "https://github.com/alice.png" }],
     url: "https://github.com/owner/repo/issues/1",
+    fieldValues: {},
   },
   {
     id: "owner/repo#2",
@@ -46,6 +47,7 @@ const issues: Issue[] = [
     labels: [{ name: "design", color: "e4e669" }],
     assignees: [],
     url: "https://github.com/owner/repo/issues/2",
+    fieldValues: {},
   },
   {
     id: "owner/repo#3",
@@ -58,6 +60,7 @@ const issues: Issue[] = [
     labels: [{ name: "backend", color: "d73a4a" }],
     assignees: [],
     url: "https://github.com/owner/repo/issues/3",
+    fieldValues: {},
   },
   {
     id: "owner/repo#4",
@@ -70,6 +73,7 @@ const issues: Issue[] = [
     labels: [],
     assignees: [],
     url: "https://github.com/owner/repo/issues/4",
+    fieldValues: {},
   },
   {
     id: "owner/repo#5",
@@ -82,6 +86,7 @@ const issues: Issue[] = [
     labels: [{ name: "testing", color: "a2eeef" }],
     assignees: [],
     url: "https://github.com/owner/repo/issues/5",
+    fieldValues: {},
   },
 ];
 
@@ -133,6 +138,7 @@ const multiRepoIssues: Issue[] = [
     labels: [{ name: "epic", color: "0075ca" }],
     assignees: [],
     url: "https://github.com/org/frontend/issues/1",
+    fieldValues: {},
   },
   {
     id: "org/frontend#5",
@@ -145,6 +151,7 @@ const multiRepoIssues: Issue[] = [
     labels: [],
     assignees: [],
     url: "https://github.com/org/frontend/issues/5",
+    fieldValues: {},
   },
   {
     id: "org/backend#10",
@@ -157,6 +164,7 @@ const multiRepoIssues: Issue[] = [
     labels: [{ name: "api", color: "d73a4a" }],
     assignees: [],
     url: "https://github.com/org/backend/issues/10",
+    fieldValues: {},
   },
   {
     id: "org/infra#3",
@@ -169,6 +177,7 @@ const multiRepoIssues: Issue[] = [
     labels: [],
     assignees: [],
     url: "https://github.com/org/infra/issues/3",
+    fieldValues: {},
   },
 ];
 
@@ -182,5 +191,70 @@ export const MultiRepo: Story = {
   args: {
     issues: multiRepoIssues,
     dependencies: multiRepoDeps,
+  },
+};
+
+const multiAssigneeIssues: Issue[] = [
+  {
+    id: "owner/repo#1",
+    number: 1,
+    owner: "owner",
+    repo: "repo",
+    title: "Epic: Platform migration",
+    state: "open",
+    body: "",
+    labels: [{ name: "epic", color: "0075ca" }],
+    assignees: [
+      { login: "alice", avatarUrl: "https://github.com/alice.png" },
+      { login: "bob", avatarUrl: "https://github.com/bob.png" },
+      { login: "carol", avatarUrl: "https://github.com/carol.png" },
+    ],
+    url: "https://github.com/owner/repo/issues/1",
+    fieldValues: {},
+  },
+  {
+    id: "owner/repo#2",
+    number: 2,
+    owner: "owner",
+    repo: "repo",
+    title: "Migrate database schema",
+    state: "open",
+    body: "",
+    labels: [{ name: "backend", color: "d73a4a" }],
+    assignees: [
+      { login: "alice", avatarUrl: "https://github.com/alice.png" },
+      { login: "dave", avatarUrl: "https://github.com/dave.png" },
+      { login: "eve", avatarUrl: "https://github.com/eve.png" },
+      { login: "frank", avatarUrl: "https://github.com/frank.png" },
+      { login: "grace", avatarUrl: "https://github.com/grace.png" },
+    ],
+    url: "https://github.com/owner/repo/issues/2",
+    fieldValues: {},
+  },
+  {
+    id: "owner/repo#3",
+    number: 3,
+    owner: "owner",
+    repo: "repo",
+    title: "Update frontend components",
+    state: "closed",
+    body: "",
+    labels: [],
+    assignees: [
+      { login: "bob", avatarUrl: "https://github.com/bob.png" },
+      { login: "carol", avatarUrl: "https://github.com/carol.png" },
+    ],
+    url: "https://github.com/owner/repo/issues/3",
+    fieldValues: {},
+  },
+];
+
+export const MultipleAssignees: Story = {
+  args: {
+    issues: multiAssigneeIssues,
+    dependencies: [
+      { source: "owner/repo#1", target: "owner/repo#2", type: "sub_issue" },
+      { source: "owner/repo#1", target: "owner/repo#3", type: "sub_issue" },
+    ],
   },
 };

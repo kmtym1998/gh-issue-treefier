@@ -20,6 +20,7 @@ const sampleIssues: Issue[] = [
     labels: [{ name: "bug", color: "d73a4a" }],
     assignees: [],
     url: "https://github.com/owner/repo/issues/1",
+    fieldValues: {},
   },
   {
     id: "owner/repo#2",
@@ -32,6 +33,7 @@ const sampleIssues: Issue[] = [
     labels: [],
     assignees: [],
     url: "https://github.com/owner/repo/issues/2",
+    fieldValues: {},
   },
   {
     id: "owner/repo#3",
@@ -44,6 +46,7 @@ const sampleIssues: Issue[] = [
     labels: [{ name: "enhancement", color: "a2eeef" }],
     assignees: [],
     url: "https://github.com/owner/repo/issues/3",
+    fieldValues: {},
   },
 ];
 
@@ -59,14 +62,21 @@ describe("issuesToNodes", () => {
     expect(nodes).toHaveLength(3);
     expect(nodes[0].id).toBe("owner/repo#1");
     expect(nodes[0].type).toBe("issue");
-    expect(nodes[0].data.label).toBe("#1 Parent issue");
+    expect((nodes[0].data as { issue: Issue }).issue.number).toBe(1);
+    expect((nodes[0].data as { issue: Issue }).issue.title).toBe("Parent issue");
     expect(nodes[1].id).toBe("owner/repo#2");
     expect(nodes[1].type).toBe("issue");
     expect(nodes[2].id).toBe("owner/repo#3");
     expect(nodes[2].type).toBe("issue");
   });
 
-  it("includes repo name in label for multi-repo issues", () => {
+  it("sets isMultiRepo=false for single-repo issues", () => {
+    const nodes = issuesToNodes(sampleIssues);
+
+    expect((nodes[0].data as { isMultiRepo: boolean }).isMultiRepo).toBe(false);
+  });
+
+  it("sets isMultiRepo=true for multi-repo issues", () => {
     const multiRepoIssues: Issue[] = [
       {
         id: "owner/frontend#1",
@@ -79,6 +89,7 @@ describe("issuesToNodes", () => {
         labels: [],
         assignees: [],
         url: "https://github.com/owner/frontend/issues/1",
+        fieldValues: {},
       },
       {
         id: "owner/backend#2",
@@ -91,29 +102,26 @@ describe("issuesToNodes", () => {
         labels: [],
         assignees: [],
         url: "https://github.com/owner/backend/issues/2",
+        fieldValues: {},
       },
     ];
 
     const nodes = issuesToNodes(multiRepoIssues);
 
-    expect(nodes[0].data.label).toBe("frontend#1 UI bug");
-    expect(nodes[1].data.label).toBe("backend#2 API fix");
+    expect((nodes[0].data as { isMultiRepo: boolean }).isMultiRepo).toBe(true);
+    expect((nodes[1].data as { isMultiRepo: boolean }).isMultiRepo).toBe(true);
   });
 
-  it("applies open state style", () => {
+  it("sets open state on issue data", () => {
     const nodes = issuesToNodes([sampleIssues[0]]);
 
-    expect(nodes[0].data.style).toMatchObject({
-      background: "#dafbe1",
-    });
+    expect((nodes[0].data as { issue: Issue }).issue.state).toBe("open");
   });
 
-  it("applies closed state style", () => {
+  it("sets closed state on issue data", () => {
     const nodes = issuesToNodes([sampleIssues[1]]);
 
-    expect(nodes[0].data.style).toMatchObject({
-      background: "#f0e6ff",
-    });
+    expect((nodes[0].data as { issue: Issue }).issue.state).toBe("closed");
   });
 
   it("returns empty array for empty input", () => {

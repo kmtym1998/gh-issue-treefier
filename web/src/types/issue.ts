@@ -9,6 +9,8 @@ export interface Issue {
   labels: Label[];
   assignees: Assignee[];
   url: string;
+  /** プロジェクトフィールドの値。fieldId → optionId/iterationId のマップ */
+  fieldValues: Record<string, string>;
 }
 
 export interface Assignee {

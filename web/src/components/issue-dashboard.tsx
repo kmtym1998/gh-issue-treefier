@@ -417,6 +417,7 @@ export function IssueDashboard() {
                 issues={allIssues}
                 dependencies={graphDependencies}
                 projectId={filters.projectId}
+                projectFields={projectFields}
                 pendingNodePositions={pendingNodePositions}
                 onNodeClick={handleNodeClick}
                 onEdgeDelete={handleEdgeDelete}

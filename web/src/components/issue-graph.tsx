@@ -26,24 +26,175 @@ import type {
   Issue,
   PaneContextMenuState,
 } from "../types/issue";
+import type { ProjectField } from "../types/project";
 import { PaneContextMenu } from "./pane-context-menu";
 
 import "@xyflow/react/dist/style.css";
 
+interface ResolvedField {
+  name: string;
+  value: string;
+  /** GitHub ProjectV2SingleSelectFieldOption の color enum 値 */
+  color?: string;
+}
+
+/** GitHub の SINGLE_SELECT オプション color enum → CSS カラー */
+const FIELD_OPTION_COLORS: Record<string, { bg: string; text: string }> = {
+  GRAY:   { bg: "#eaeef2", text: "#57606a" },
+  BLUE:   { bg: "#ddf4ff", text: "#0550ae" },
+  GREEN:  { bg: "#dafbe1", text: "#116329" },
+  YELLOW: { bg: "#fff8c5", text: "#9a6700" },
+  ORANGE: { bg: "#fff1e5", text: "#953800" },
+  RED:    { bg: "#ffebe9", text: "#cf222e" },
+  PINK:   { bg: "#ffeff7", text: "#bf3989" },
+  PURPLE: { bg: "#fbefff", text: "#8250df" },
+  CYAN:   { bg: "#e6f4f1", text: "#0d7a6b" },
+};
+
+interface IssueNodeData {
+  issue: Issue;
+  isMultiRepo: boolean;
+  resolvedFields: ResolvedField[];
+}
+
 function IssueNode({ data, selected }: NodeProps) {
-  const baseStyle = data.style as React.CSSProperties;
-  const style: React.CSSProperties = selected
-    ? {
-        ...baseStyle,
-        boxShadow: "0 0 0 2px #0969da",
-        borderColor: "#0969da",
-      }
-    : baseStyle;
+  const { issue, isMultiRepo, resolvedFields } = data as unknown as IssueNodeData;
+  const isPR = issue.url.includes("/pull/");
+  const isOpen = issue.state === "open";
+  const stateColor = isOpen ? "#1a7f37" : "#8250df";
+  const stateBg = isOpen ? "#dafbe1" : "#f0e6ff";
 
   return (
-    <div style={style}>
+    <div
+      style={{
+        background: "#fff",
+        border: `1px solid ${selected ? "#0969da" : "#d0d7de"}`,
+        borderLeft: `3px solid ${stateColor}`,
+        borderRadius: 6,
+        padding: "6px 8px 5px",
+        fontSize: 12,
+        width: NODE_WIDTH,
+        boxSizing: "border-box",
+        boxShadow: selected
+          ? "0 0 0 2px #0969da40"
+          : "0 1px 3px rgba(0,0,0,0.08)",
+      }}
+    >
       <Handle type="target" position={Position.Top} />
-      {data.label as string}
+
+      {/* ヘッダー: タイプ + リポジトリ + 番号 */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 3,
+          gap: 4,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              padding: "1px 4px",
+              borderRadius: 3,
+              background: isPR ? "#ddf4ff" : stateBg,
+              color: isPR ? "#0550ae" : stateColor,
+              letterSpacing: "0.03em",
+              flexShrink: 0,
+            }}
+          >
+            {isPR ? "PR" : "Issue"}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              color: "#656d76",
+              fontFamily: "monospace",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {isMultiRepo ? `${issue.owner}/${issue.repo}` : issue.repo}
+          </span>
+        </div>
+        <span style={{ fontSize: 10, color: "#656d76", flexShrink: 0 }}>
+          #{issue.number}
+        </span>
+      </div>
+
+      {/* タイトル */}
+      <div
+        style={{
+          fontWeight: 500,
+          fontSize: 12,
+          color: "#24292f",
+          lineHeight: 1.35,
+          marginBottom: resolvedFields.length > 0 || issue.assignees.length > 0 ? 5 : 0,
+          overflow: "hidden",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+        }}
+      >
+        {issue.title}
+      </div>
+
+      {/* フッター: ステータス + フィールド値 + Assignee */}
+      {(resolvedFields.length > 0 || issue.assignees.length > 0) && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <div style={{ display: "flex", gap: 3, flexWrap: "wrap", minWidth: 0 }}>
+            {resolvedFields.map((f) => {
+              const fieldColor = f.color ? FIELD_OPTION_COLORS[f.color] : undefined;
+              return (
+                <span
+                  key={f.name}
+                  style={{
+                    fontSize: 10,
+                    padding: "1px 5px",
+                    borderRadius: 10,
+                    background: fieldColor?.bg ?? "#f6f8fa",
+                    color: fieldColor?.text ?? "#57606a",
+                    border: `1px solid ${fieldColor?.bg ?? "#d0d7de"}`,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {f.value}
+                </span>
+              );
+            })}
+          </div>
+          {issue.assignees.length > 0 && (
+            <div style={{ display: "flex", gap: -2, flexShrink: 0 }}>
+              {issue.assignees.slice(0, 4).map((a) => (
+                <img
+                  key={a.login}
+                  src={a.avatarUrl}
+                  alt={a.login}
+                  title={a.login}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    border: "1px solid #fff",
+                    marginLeft: -3,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -51,36 +202,40 @@ function IssueNode({ data, selected }: NodeProps) {
 
 const nodeTypes = { issue: IssueNode };
 
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 40;
+const NODE_WIDTH = 240;
+export const NODE_HEIGHT = 88;
 
 /**
  * Issue 配列を ReactFlow の Node 配列に変換する。
  * position は仮の値（0, 0）で、layoutNodes で更新される。
- * 複数リポジトリがある場合はラベルに repo 名を含める。
+ * projectFields・visibleFieldIds を渡すとフィールド値をノードデータに含める。
  */
-export function issuesToNodes(issues: Issue[]): Node[] {
+export function issuesToNodes(
+  issues: Issue[],
+  projectFields: ProjectField[] = [],
+  visibleFieldIds: string[] = [],
+): Node[] {
   const repos = new Set(issues.map((i) => `${i.owner}/${i.repo}`));
   const isMultiRepo = repos.size > 1;
 
-  return issues.map((issue) => ({
-    id: issue.id,
-    type: "issue",
-    data: {
-      label: isMultiRepo
-        ? `${issue.repo}#${issue.number} ${issue.title}`
-        : `#${issue.number} ${issue.title}`,
-      style: {
-        background: issue.state === "open" ? "#dafbe1" : "#f0e6ff",
-        border: `1px solid ${issue.state === "open" ? "#1a7f37" : "#8250df"}`,
-        borderRadius: 6,
-        padding: "6px 10px",
-        fontSize: 12,
-        width: NODE_WIDTH,
-      },
-    },
-    position: { x: 0, y: 0 },
-  }));
+  return issues.map((issue) => {
+    const resolvedFields: ResolvedField[] = visibleFieldIds.flatMap((fieldId) => {
+      const field = projectFields.find((f) => f.id === fieldId);
+      if (!field) return [];
+      const optionId = issue.fieldValues?.[fieldId];
+      if (!optionId) return [];
+      const option = field.options.find((o) => o.id === optionId);
+      if (!option) return [];
+      return [{ name: field.name, value: option.name, color: option.color }];
+    });
+
+    return {
+      id: issue.id,
+      type: "issue",
+      data: { issue, isMultiRepo, resolvedFields } satisfies IssueNodeData,
+      position: { x: 0, y: 0 },
+    };
+  });
 }
 
 /**
@@ -222,6 +377,7 @@ export interface IssueGraphProps {
   issues: Issue[];
   dependencies: Dependency[];
   projectId: string;
+  projectFields?: ProjectField[];
   pendingNodePositions?: Record<string, { x: number; y: number }>;
   onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
@@ -239,6 +395,7 @@ function IssueGraphInner({
   issues,
   dependencies,
   projectId,
+  projectFields = [],
   pendingNodePositions,
   onNodeClick,
   onEdgeDelete,
@@ -256,7 +413,7 @@ function IssueGraphInner({
     if (initializedProjectIdRef.current === projectId && layoutedNodes) return;
 
     let cancelled = false;
-    const nodes = issuesToNodes(issues);
+    const nodes = issuesToNodes(issues); // レイアウト用: フィールド値不要
     const edges = dependenciesToEdges(dependencies);
 
     layoutNodes(nodes, edges).then(async (result) => {
@@ -311,6 +468,7 @@ function IssueGraphInner({
         initialNodes={layoutedNodes}
         issues={issues}
         edges={edges}
+        projectFields={projectFields}
         pendingNodePositions={pendingNodePositions}
         onNodeClick={onNodeClick}
         onEdgeDelete={onEdgeDelete}
@@ -328,6 +486,7 @@ function IssueGraphReady({
   initialNodes,
   issues,
   edges,
+  projectFields,
   pendingNodePositions,
   onNodeClick,
   onEdgeDelete,
@@ -340,6 +499,7 @@ function IssueGraphReady({
   initialNodes: Node[];
   issues: Issue[];
   edges: Edge[];
+  projectFields: ProjectField[];
   pendingNodePositions?: Record<string, { x: number; y: number }>;
   onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
@@ -348,6 +508,32 @@ function IssueGraphReady({
   onAddIssue?: (flowPosition: { x: number; y: number }) => void;
   onAddPR?: (flowPosition: { x: number; y: number }) => void;
 }) {
+  const selectableFields = projectFields.filter(
+    (f) => f.dataType === "SINGLE_SELECT" || f.dataType === "ITERATION",
+  );
+
+  const [visibleFieldIds, setVisibleFieldIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("node-visible-fields");
+      return stored ? (JSON.parse(stored) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [fieldsMenuOpen, setFieldsMenuOpen] = useState(false);
+  const fieldsButtonRef = useRef<HTMLButtonElement>(null);
+
+  const toggleFieldVisibility = useCallback((fieldId: string) => {
+    setVisibleFieldIds((prev) => {
+      const next = prev.includes(fieldId)
+        ? prev.filter((id) => id !== fieldId)
+        : [...prev, fieldId];
+      localStorage.setItem("node-visible-fields", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const [connectionMode, setConnectionMode] =
     useState<DependencyType>("sub_issue");
 
@@ -403,7 +589,7 @@ function IssueGraphReady({
 
   useEffect(() => {
     let cancelled = false;
-    const issueNodes = issuesToNodes(issues);
+    const issueNodes = issuesToNodes(issues, projectFields, visibleFieldIds);
     const issueNodeMap = new Map(issueNodes.map((node) => [node.id, node]));
 
     const apply = async () => {
@@ -442,7 +628,7 @@ function IssueGraphReady({
     return () => {
       cancelled = true;
     };
-  }, [issues, pendingNodePositions, projectId, setNodes]);
+  }, [issues, pendingNodePositions, projectId, projectFields, visibleFieldIds, setNodes]);
 
   // --- ペインコンテキストメニュー（空白領域の右クリック） ---
   const [paneContextMenu, setPaneContextMenu] =
@@ -603,6 +789,38 @@ function IssueGraphReady({
         >
           Blocked By
         </button>
+
+        {selectableFields.length > 0 && (
+          <div style={{ position: "relative", marginLeft: 8 }}>
+            <button
+              ref={fieldsButtonRef}
+              type="button"
+              style={{
+                ...graphStyles.modeButton,
+                borderRadius: 4,
+                ...(fieldsMenuOpen ? graphStyles.modeButtonActiveSubIssue : {}),
+              }}
+              onClick={() => setFieldsMenuOpen((v) => !v)}
+            >
+              Fields {visibleFieldIds.length > 0 ? `(${visibleFieldIds.length})` : ""}
+            </button>
+            {fieldsMenuOpen && (
+              <div style={graphStyles.fieldsDropdown}>
+                {selectableFields.map((field) => (
+                  <label key={field.id} style={graphStyles.fieldsDropdownItem}>
+                    <input
+                      type="checkbox"
+                      checked={visibleFieldIds.includes(field.id)}
+                      onChange={() => toggleFieldVisibility(field.id)}
+                      style={{ marginRight: 6 }}
+                    />
+                    {field.name}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {selectedCount >= 2 && (
         <div style={graphStyles.selectionBadge}>
@@ -715,5 +933,26 @@ const graphStyles: Record<string, React.CSSProperties> = {
     background: "#cf222e",
     color: "#fff",
     borderColor: "#cf222e",
+  },
+  fieldsDropdown: {
+    position: "absolute",
+    top: "calc(100% + 4px)",
+    left: 0,
+    zIndex: 20,
+    background: "#fff",
+    border: "1px solid #d0d7de",
+    borderRadius: 6,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+    minWidth: 160,
+    padding: "4px 0",
+  },
+  fieldsDropdownItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "5px 12px",
+    fontSize: 12,
+    color: "#24292f",
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
   },
 };
