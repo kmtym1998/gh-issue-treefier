@@ -3,6 +3,10 @@ import { HttpResponse, http } from "msw";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { IssueDashboard } from "./issue-dashboard";
 
+// TODO: mockProjects, mockCollaborators, mockCreatedIssue, mockAddProject などの
+// モックデータが issue-create-form.stories.tsx, item-search-form.stories.tsx,
+// filter-panel.stories.tsx と重複している。
+// __mocks__/fixtures.ts と __mocks__/handlers.ts に共通化すべき。
 const mockProjectItems = {
   data: {
     node: {

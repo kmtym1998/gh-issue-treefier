@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { HttpResponse, http } from "msw";
 import { fn } from "storybook/test";
+// TODO: mockAddProject, MSW ハンドラーなどが
+// issue-dashboard.stories.tsx, issue-create-form.stories.tsx と重複している。
+// __mocks__/fixtures.ts と __mocks__/handlers.ts に共通化すべき。
 import { ItemSearchForm } from "./item-search-form";
 
 const mockIssueResults = {

@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { HttpResponse, http } from "msw";
 import { expect, fn, userEvent, within } from "storybook/test";
+// TODO: mockProjects レスポンス構造が issue-dashboard.stories.tsx と重複している。
+// __mocks__/fixtures.ts に共通化すべき。
 import { FilterPanel } from "./filter-panel";
 
 const mockProjects = {

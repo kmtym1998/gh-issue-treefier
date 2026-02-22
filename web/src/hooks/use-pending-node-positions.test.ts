@@ -9,6 +9,8 @@ vi.mock("../lib/cache", () => ({
   setNodePositions: vi.fn().mockResolvedValue(undefined),
 }));
 
+// TODO: makeIssue ヘルパーが use-optimistic-issues.test.ts と重複定義されている。
+// __test-utils__/fixtures.ts に共通化すべき。
 const makeIssue = (id: string): Issue => ({
   id,
   number: 1,

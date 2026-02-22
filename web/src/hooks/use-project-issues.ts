@@ -77,6 +77,15 @@ export const buildIssueId = (
   number: number,
 ): string => `${owner}/${repo}#${number}`;
 
+// TODO: buildIssueId の逆操作 parseIssueId をここに export する。
+// 現在 issue-dashboard.tsx に useCallback でインライン定義されているが、
+// 純粋関数なので useCallback は不要。buildIssueId の隣に置くのが自然。
+// export const parseIssueId = (id: string) => {
+//   const [ownerRepo, num] = id.split("#");
+//   const [owner, repo] = ownerRepo.split("/");
+//   return { owner, repo, number: Number.parseInt(num, 10) };
+// };
+
 /**
  * content が Issue のデータを持つか判定する。
  * GraphQL の `... on Issue` フラグメントは DraftIssue に対して空オブジェクト `{}` を返すため、

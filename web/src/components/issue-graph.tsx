@@ -16,6 +16,9 @@ import {
 } from "@xyflow/react";
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// TODO: issue-graph.tsx が getNodePositions/setNodePositions を直接操作している。
+// usePendingNodePositions フックと同じキャッシュを独立して操作しているため、
+// 将来整合性が崩れるリスクがある。キャッシュ操作をフック経由に統一すべき。
 import { getNodePositions, setNodePositions } from "../lib/cache";
 import type {
   Dependency,

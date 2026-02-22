@@ -28,6 +28,10 @@ export function IssueDashboard() {
     "create-issue" | "search-issue" | "search-pr" | null
   >(null);
 
+  // TODO: optimisticOps 関連のロジック (depKey, graphDependencies, cleanup effect,
+  // addDependency, removeDependency) を useOptimisticDependencies フックに抽出する。
+  // useOptimisticIssues と同じパターン (サーバーデータ + 楽観データのマージ + クリーンアップ)
+  // で約50行削減できる。
   const [optimisticOps, setOptimisticOps] = useState<{
     added: Dependency[];
     removed: Dependency[];
@@ -93,6 +97,10 @@ export function IssueDashboard() {
     [allIssues],
   );
 
+  // TODO: depKey は依存配列 [] の純粋関数なので useCallback で包む必要がない。
+  // コンポーネント外の plain function に変更すべき。
+  // そうすれば graphDependencies, cleanup effect, addDependency, removeDependency の
+  // deps からも除外できてコードが簡潔になる。
   const depKey = useCallback(
     (dep: Dependency) => `${dep.type}:${dep.source}->${dep.target}`,
     [],
@@ -154,6 +162,7 @@ export function IssueDashboard() {
     setMutationError(`${action}に失敗しました: ${message}`);
   }, []);
 
+  // TODO: parseIssueId を use-project-issues.ts から import する (buildIssueId の隣に定義)
   const parseIssueId = useCallback((id: string) => {
     const [ownerRepo, num] = id.split("#");
     const [owner, repo] = ownerRepo.split("/");

@@ -10,6 +10,8 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
+// TODO: jsonResponse ヘルパーが 6 つのテストファイルで重複定義されている。
+// __test-utils__/fetch.ts に共通化すべき。
 const jsonResponse = (body: unknown, status = 200, statusText = "OK") =>
   new Response(JSON.stringify(body), {
     status,

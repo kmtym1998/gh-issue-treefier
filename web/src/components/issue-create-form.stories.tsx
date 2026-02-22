@@ -4,6 +4,9 @@ import { fn } from "storybook/test";
 import type { ProjectField } from "../types/project";
 import { IssueCreateForm } from "./issue-create-form";
 
+// TODO: mockCollaborators, mockCreatedIssue, mockAddProject, MSW ハンドラーなどが
+// issue-dashboard.stories.tsx, item-search-form.stories.tsx と重複している。
+// __mocks__/fixtures.ts と __mocks__/handlers.ts に共通化すべき。
 const repos = ["octocat/hello-world", "octocat/linguist"];
 
 const projectFields: ProjectField[] = [

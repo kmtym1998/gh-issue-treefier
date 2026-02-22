@@ -48,6 +48,7 @@ export function IssueDetail({
 
       const num = Number.parseInt(childNumber.trim(), 10);
       if (Number.isNaN(num) || num <= 0) {
+        // TODO: エラーメッセージを日本語に統一する (他コンポーネントは日本語)
         setFormError("Invalid issue number");
         return;
       }
@@ -58,6 +59,7 @@ export function IssueDetail({
         await onAddSubIssue(issue.owner, issue.repo, issue.number, num);
         setChildNumber("");
       } catch (err) {
+        // TODO: エラーメッセージを日本語に統一する (他コンポーネントは日本語)
         setFormError(err instanceof Error ? err.message : "Failed to add");
       } finally {
         setSubmitting(false);
@@ -73,6 +75,7 @@ export function IssueDetail({
 
       const num = Number.parseInt(blockerNumber.trim(), 10);
       if (Number.isNaN(num) || num <= 0) {
+        // TODO: エラーメッセージを日本語に統一する (他コンポーネントは日本語)
         setFormError("Invalid issue number");
         return;
       }
@@ -83,6 +86,7 @@ export function IssueDetail({
         await onAddBlockedBy(issue.owner, issue.repo, issue.number, num);
         setBlockerNumber("");
       } catch (err) {
+        // TODO: エラーメッセージを日本語に統一する (他コンポーネントは日本語)
         setFormError(err instanceof Error ? err.message : "Failed to add");
       } finally {
         setSubmitting(false);

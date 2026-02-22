@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import type { Issue } from "../types/issue";
 import { useOptimisticIssues } from "./use-optimistic-issues";
 
+// TODO: makeIssue ヘルパーが use-pending-node-positions.test.ts と重複定義されている。
+// __test-utils__/fixtures.ts に共通化すべき。
 const makeIssue = (id: string, title = "test"): Issue => ({
   id,
   number: 1,
