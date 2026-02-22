@@ -10,8 +10,8 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useItemSearch } from "../hooks/use-item-search";
-import { useResizablePanel } from "../hooks/use-resizable-panel";
 import { useProjectMutations } from "../hooks/use-project-mutations";
+import { useResizablePanel } from "../hooks/use-resizable-panel";
 import type { SearchResult } from "../types/issue";
 
 export interface ItemSearchFormProps {
@@ -29,7 +29,10 @@ export function ItemSearchForm({
   onSuccess,
   onClose,
 }: ItemSearchFormProps) {
-  const { width, handleMouseDown } = useResizablePanel("panel-width:item-search-form", 400);
+  const { width, handleMouseDown } = useResizablePanel(
+    "panel-width:item-search-form",
+    400,
+  );
   const [inputValue, setInputValue] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);

@@ -41,7 +41,9 @@ export function IssueDashboard() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const flushingRef = useRef(false);
-  const createIssueBasePositionRef = useRef<{ x: number; y: number } | null>(null);
+  const createIssueBasePositionRef = useRef<{ x: number; y: number } | null>(
+    null,
+  );
   const handleFlush = useCallback(async () => {
     if (flushingRef.current) return;
     flushingRef.current = true;
@@ -350,7 +352,10 @@ export function IssueDashboard() {
       if (continueCreating) {
         const basePos = createIssueBasePositionRef.current;
         if (basePos) {
-          const nextPos = { x: basePos.x, y: basePos.y + CONTINUE_CREATE_Y_OFFSET };
+          const nextPos = {
+            x: basePos.x,
+            y: basePos.y + CONTINUE_CREATE_Y_OFFSET,
+          };
           createIssueBasePositionRef.current = nextPos;
           reservePosition(nextPos);
         }

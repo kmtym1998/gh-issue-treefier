@@ -96,7 +96,10 @@ export function IssueDetail({
     [issue, onAddBlockedBy, blockerNumber],
   );
 
-  const { width, handleMouseDown } = useResizablePanel("panel-width:issue-detail", 400);
+  const { width, handleMouseDown } = useResizablePanel(
+    "panel-width:issue-detail",
+    400,
+  );
 
   if (!issue) return null;
 

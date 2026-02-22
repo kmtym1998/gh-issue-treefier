@@ -37,7 +37,10 @@ export function IssueCreateForm({
   onSuccess,
   onClose,
 }: IssueCreateFormProps) {
-  const { width, handleMouseDown } = useResizablePanel("panel-width:issue-create-form", 400);
+  const { width, handleMouseDown } = useResizablePanel(
+    "panel-width:issue-create-form",
+    400,
+  );
   const [repoInputValue, setRepoInputValue] = useState("");
   const [templates, setTemplates] = useState<IssueTemplate[]>([]);
   const [collaborators, setCollaborators] = useState<
@@ -345,9 +348,7 @@ export function IssueCreateForm({
             disabled={submitting}
           />
         }
-        label={
-          <Typography sx={{ fontSize: 13 }}>続けて作成する</Typography>
-        }
+        label={<Typography sx={{ fontSize: 13 }}>続けて作成する</Typography>}
         sx={{ m: 0 }}
       />
 
