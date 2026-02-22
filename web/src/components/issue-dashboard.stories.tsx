@@ -205,16 +205,23 @@ export const WithIssues: Story = {
 
     await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
 
-    // Wait for projects to load
+    // Wait for projects to load (Project select becomes enabled)
     await waitFor(
       () => {
-        const select = canvas.getByLabelText("Project") as HTMLSelectElement;
-        expect(select.disabled).toBe(false);
-        expect(select.options.length).toBeGreaterThan(1);
+        const trigger = canvas.getByLabelText("Project");
+        expect(trigger.getAttribute("aria-disabled")).not.toBe("true");
       },
       { timeout: 3000 },
     );
-    await userEvent.selectOptions(canvas.getByLabelText("Project"), "PVT_1");
+
+    // MUI Select: click to open, then select from dropdown
+    await userEvent.click(canvas.getByLabelText("Project"));
+    const listbox = within(
+      canvasElement.ownerDocument.body.querySelector(
+        '[role="listbox"]',
+      ) as HTMLElement,
+    );
+    await userEvent.click(listbox.getByText("#1 Sprint Board"));
 
     // グラフが描画されるまで待機
     await expect(
@@ -237,13 +244,19 @@ export const EmptyResult: Story = {
 
     await waitFor(
       () => {
-        const select = canvas.getByLabelText("Project") as HTMLSelectElement;
-        expect(select.disabled).toBe(false);
-        expect(select.options.length).toBeGreaterThan(1);
+        const trigger = canvas.getByLabelText("Project");
+        expect(trigger.getAttribute("aria-disabled")).not.toBe("true");
       },
       { timeout: 3000 },
     );
-    await userEvent.selectOptions(canvas.getByLabelText("Project"), "PVT_1");
+
+    await userEvent.click(canvas.getByLabelText("Project"));
+    const listbox = within(
+      canvasElement.ownerDocument.body.querySelector(
+        '[role="listbox"]',
+      ) as HTMLElement,
+    );
+    await userEvent.click(listbox.getByText("#1 Sprint Board"));
 
     await expect(
       await canvas.findByText("Issue が見つかりませんでした", undefined, {
@@ -265,13 +278,19 @@ export const ErrorState: Story = {
 
     await waitFor(
       () => {
-        const select = canvas.getByLabelText("Project") as HTMLSelectElement;
-        expect(select.disabled).toBe(false);
-        expect(select.options.length).toBeGreaterThan(1);
+        const trigger = canvas.getByLabelText("Project");
+        expect(trigger.getAttribute("aria-disabled")).not.toBe("true");
       },
       { timeout: 3000 },
     );
-    await userEvent.selectOptions(canvas.getByLabelText("Project"), "PVT_1");
+
+    await userEvent.click(canvas.getByLabelText("Project"));
+    const listbox = within(
+      canvasElement.ownerDocument.body.querySelector(
+        '[role="listbox"]',
+      ) as HTMLElement,
+    );
+    await userEvent.click(listbox.getByText("#1 Sprint Board"));
 
     await expect(
       await canvas.findByText(/Error:/, undefined, { timeout: 3000 }),

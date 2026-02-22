@@ -110,8 +110,16 @@ export const ChangeState: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
 
+    // MUI Select: クリックで開いてメニューアイテムを選択
     const stateSelect = canvas.getByLabelText("State");
-    await userEvent.selectOptions(stateSelect, "closed");
+    await userEvent.click(stateSelect);
+
+    const listbox = within(
+      canvasElement.ownerDocument.body.querySelector(
+        '[role="listbox"]',
+      ) as HTMLElement,
+    );
+    await userEvent.click(listbox.getByText("Closed"));
 
     expect(args.onChange).toHaveBeenCalled();
     const lastCall =

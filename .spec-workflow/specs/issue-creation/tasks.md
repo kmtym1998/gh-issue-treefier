@@ -1,13 +1,13 @@
 # Tasks Document
 
-- [ ] 1. MUI の導入
+- [x] 1. MUI の導入
   - File: `web/package.json`
   - `@mui/material`, `@emotion/react`, `@emotion/styled` をインストールする
   - Purpose: UI コンポーネントライブラリの導入
   - _Requirements: 全体_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer | Task: Install MUI dependencies (`@mui/material`, `@emotion/react`, `@emotion/styled`) in web/package.json. Verify the installation compiles correctly and does not break existing components. | Restrictions: Do not modify any existing components in this task. | _Leverage: web/package.json_ | Success: Dependencies are installed, `npm run build` passes, existing tests still pass. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 1.1. 既存コンポーネントの MUI 置き換え: IssueDetail
+- [x] 1.1. 既存コンポーネントの MUI 置き換え: IssueDetail
   - File: `web/src/components/issue-detail.tsx`
   - インラインスタイルの `styles` オブジェクトを削除し、MUI コンポーネントに置き換える
   - Chip (state badge, repo badge, labels), Avatar, Typography, TextField, Button, Alert, Link, IconButton, Stack, Box 等を使用
@@ -16,7 +16,7 @@
   - _Requirements: 全体_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer with MUI experience | Task: Refactor web/src/components/issue-detail.tsx to use MUI components instead of inline styles. Replace: (1) state badge → MUI Chip with color prop, (2) repo badge → MUI Chip variant="outlined", (3) close button → MUI IconButton, (4) title → MUI Typography, (5) labels → MUI Chip with sx background color, (6) assignees → MUI Avatar + Typography, (7) body → MUI Typography, (8) form inputs → MUI TextField, (9) form buttons → MUI Button with color="success"/"error", (10) error text → MUI Alert severity="error", (11) GitHub link → MUI Link, (12) layout → MUI Stack/Box. Remove the entire `styles` const object. Keep the same visual appearance as much as possible. Ensure the panel width remains 280px. | Restrictions: Do not change component props or behavior. Only change styling approach. Keep isLightColor utility function. Ensure existing Storybook stories still work. | _Leverage: web/src/components/issue-detail.tsx_ | Success: Component renders identically, no inline style objects remain, all MUI components used correctly, existing tests pass. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 1.2. 既存コンポーネントの MUI 置き換え: FilterPanel
+- [x] 1.2. 既存コンポーネントの MUI 置き換え: FilterPanel
   - File: `web/src/components/filter-panel.tsx`
   - インラインスタイルを MUI コンポーネントに置き換える
   - TextField, Select/MenuItem, FormControl, InputLabel, Stack, Box 等を使用
@@ -25,7 +25,7 @@
   - _Requirements: 全体_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer with MUI experience | Task: Refactor web/src/components/filter-panel.tsx to use MUI components instead of inline styles. Replace: (1) owner input → MUI TextField, (2) state selector → MUI Select + MenuItem, (3) project selector → MUI Select + MenuItem, (4) field filters → MUI Select + MenuItem with FormControl/InputLabel, (5) layout → MUI Stack/Box. Remove inline style objects. Keep the same visual layout (horizontal bar at top). | Restrictions: Do not change component props or behavior. Only change styling approach. Ensure existing functionality (project change resets filters) still works. | _Leverage: web/src/components/filter-panel.tsx_ | Success: Component renders with same layout, all inline styles removed, MUI components used, existing behavior preserved. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 1.3. 既存コンポーネントの MUI 置き換え: IssueGraph のコンテキストメニュー
+- [x] 1.3. 既存コンポーネントの MUI 置き換え: IssueGraph のコンテキストメニュー
   - File: `web/src/components/issue-graph.tsx`
   - 既存のノードコンテキストメニュー（Select Descendants / Select Ancestors / Layout Selected）を MUI Menu/MenuItem に置き換える
   - Purpose: 既存コンポーネントを MUI に統一し、新規 PaneContextMenu と見た目を揃える

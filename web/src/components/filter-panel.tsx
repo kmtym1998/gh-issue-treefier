@@ -1,3 +1,4 @@
+import { Box, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { useProjectFields, useProjects } from "../hooks/use-projects";
 import type { Project, ProjectField } from "../types/project";
@@ -68,49 +69,59 @@ export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
   }, [filters, onChange]);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.row}>
-        <label style={styles.label}>
-          Owner
-          <input
-            style={styles.input}
-            type="text"
-            value={filters.owner}
-            placeholder="owner"
-            onChange={(e) => update({ owner: e.target.value })}
-          />
-        </label>
-        <label style={styles.label}>
-          State
-          <select
-            style={styles.select}
-            value={filters.state}
-            onChange={(e) =>
-              update({ state: e.target.value as FilterValues["state"] })
-            }
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 1,
+        p: 1.5,
+        borderBottom: "1px solid #d0d7de",
+        fontSize: 13,
+      }}
+    >
+      <Stack direction="row" gap={1.5} flexWrap="wrap" alignItems="flex-end">
+        <TextField
+          label="Owner"
+          size="small"
+          value={filters.owner}
+          placeholder="owner"
+          onChange={(e) => update({ owner: e.target.value })}
+          sx={{ "& .MuiInputBase-input": { fontSize: 13 } }}
+        />
+        <TextField
+          select
+          label="State"
+          size="small"
+          value={filters.state}
+          onChange={(e) =>
+            update({ state: e.target.value as FilterValues["state"] })
+          }
+          sx={{ minWidth: 100, "& .MuiSelect-select": { fontSize: 13 } }}
+        >
+          <MenuItem value="open">Open</MenuItem>
+          <MenuItem value="closed">Closed</MenuItem>
+          <MenuItem value="all">All</MenuItem>
+        </TextField>
+      </Stack>
+
+      <Stack direction="row" gap={1.5} flexWrap="wrap" alignItems="flex-end">
+        <ProjectSelect
+          projects={projects}
+          loading={projectsLoading}
+          value={filters.projectId}
+          disabled={!filters.owner}
+          onChange={handleProjectChange}
+        />
+      </Stack>
+
+      <Stack direction="row" gap={1.5} flexWrap="wrap" alignItems="flex-end">
+        {fieldsLoading && (
+          <Typography
+            sx={{ fontSize: 12, color: "#656d76", alignSelf: "center" }}
           >
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-            <option value="all">All</option>
-          </select>
-        </label>
-      </div>
-
-      <div style={styles.row}>
-        <label htmlFor="filter-project" style={styles.label}>
-          Project
-          <ProjectSelect
-            projects={projects}
-            loading={projectsLoading}
-            value={filters.projectId}
-            disabled={!filters.owner}
-            onChange={handleProjectChange}
-          />
-        </label>
-      </div>
-
-      <div style={styles.row}>
-        {fieldsLoading && <span style={styles.hint}>Loading fields...</span>}
+            Loading fields...
+          </Typography>
+        )}
         {fields.map((field) => (
           <FieldFilter
             key={field.id}
@@ -119,8 +130,8 @@ export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
             onChange={handleFieldFilterChange}
           />
         ))}
-      </div>
-    </div>
+      </Stack>
+    </Box>
   );
 }
 
@@ -138,20 +149,23 @@ function ProjectSelect({
   onChange: (projectId: string) => void;
 }) {
   return (
-    <select
+    <TextField
+      select
+      label="Project"
       id="filter-project"
-      style={styles.select}
+      size="small"
       value={value}
       disabled={disabled || loading}
       onChange={(e) => onChange(e.target.value)}
+      sx={{ minWidth: 200, "& .MuiSelect-select": { fontSize: 13 } }}
     >
-      <option value="">{loading ? "Loading..." : "-- Select --"}</option>
+      <MenuItem value="">{loading ? "Loading..." : "-- Select --"}</MenuItem>
       {projects.map((p) => (
-        <option key={p.id} value={p.id}>
+        <MenuItem key={p.id} value={p.id}>
           #{p.number} {p.title}
-        </option>
+        </MenuItem>
       ))}
-    </select>
+    </TextField>
   );
 }
 
@@ -167,64 +181,20 @@ function FieldFilter({
   if (field.options.length === 0) return null;
 
   return (
-    <label style={styles.label}>
-      {field.name}
-      <select
-        style={styles.select}
-        value={value}
-        onChange={(e) => onChange(field.id, e.target.value)}
-      >
-        <option value="">All</option>
-        {field.options.map((opt) => (
-          <option key={opt.id} value={opt.id}>
-            {opt.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <TextField
+      select
+      label={field.name}
+      size="small"
+      value={value}
+      onChange={(e) => onChange(field.id, e.target.value)}
+      sx={{ minWidth: 120, "& .MuiSelect-select": { fontSize: 13 } }}
+    >
+      <MenuItem value="">All</MenuItem>
+      {field.options.map((opt) => (
+        <MenuItem key={opt.id} value={opt.id}>
+          {opt.name}
+        </MenuItem>
+      ))}
+    </TextField>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    padding: 12,
-    borderBottom: "1px solid #d0d7de",
-    fontSize: 13,
-  },
-  row: {
-    display: "flex",
-    gap: 12,
-    flexWrap: "wrap",
-    alignItems: "flex-end",
-  },
-  label: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    fontWeight: 600,
-    color: "#24292f",
-  },
-  input: {
-    padding: "4px 8px",
-    border: "1px solid #d0d7de",
-    borderRadius: 6,
-    fontSize: 13,
-    lineHeight: "20px",
-  },
-  select: {
-    padding: "4px 8px",
-    border: "1px solid #d0d7de",
-    borderRadius: 6,
-    fontSize: 13,
-    lineHeight: "20px",
-    background: "#fff",
-  },
-  hint: {
-    fontSize: 12,
-    color: "#656d76",
-    alignSelf: "center",
-  },
-};

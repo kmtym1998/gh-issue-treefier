@@ -1,3 +1,15 @@
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  IconButton,
+  Link,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { type SubmitEvent, useCallback, useState } from "react";
 import type { Issue } from "../types/issue";
 
@@ -82,123 +94,243 @@ export function IssueDetail({
   if (!issue) return null;
 
   return (
-    <div style={styles.panel}>
-      <div style={styles.header}>
-        <span
-          style={{
-            ...styles.badge,
-            background: issue.state === "open" ? "#dafbe1" : "#f0e6ff",
+    <Box
+      sx={{
+        width: 280,
+        p: 2,
+        borderLeft: "1px solid #d0d7de",
+        bgcolor: "#fff",
+        overflowY: "auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.5,
+        fontSize: 13,
+      }}
+    >
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Chip
+          label={issue.state}
+          size="small"
+          sx={{
+            bgcolor: issue.state === "open" ? "#dafbe1" : "#f0e6ff",
             color: issue.state === "open" ? "#1a7f37" : "#8250df",
+            fontWeight: 600,
+            fontSize: 12,
           }}
+        />
+        <IconButton size="small" onClick={onClose} sx={{ color: "#656d76" }}>
+          ×
+        </IconButton>
+      </Stack>
+
+      <Chip
+        label={`${issue.owner}/${issue.repo}`}
+        variant="outlined"
+        size="small"
+        sx={{
+          alignSelf: "flex-start",
+          fontSize: 11,
+          color: "#656d76",
+          bgcolor: "#f6f8fa",
+          fontFamily: "monospace",
+          borderColor: "transparent",
+        }}
+      />
+
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 600,
+          fontSize: 15,
+          color: "#24292f",
+          lineHeight: 1.4,
+        }}
+      >
+        <Typography
+          component="span"
+          sx={{ color: "#656d76", fontWeight: 400, fontSize: "inherit" }}
         >
-          {issue.state}
-        </span>
-        <button type="button" style={styles.closeButton} onClick={onClose}>
-          &times;
-        </button>
-      </div>
-
-      <div style={styles.repoBadge}>
-        {issue.owner}/{issue.repo}
-      </div>
-
-      <h3 style={styles.title}>
-        <span style={styles.number}>#{issue.number}</span> {issue.title}
-      </h3>
+          #{issue.number}
+        </Typography>{" "}
+        {issue.title}
+      </Typography>
 
       {issue.assignees.length > 0 && (
-        <div style={styles.assignees}>
+        <Stack direction="row" flexWrap="wrap" gap={0.75}>
           {issue.assignees.map((a) => (
-            <div key={a.login} style={styles.assignee}>
-              <img src={a.avatarUrl} alt={a.login} style={styles.avatar} />
-              <span>{a.login}</span>
-            </div>
+            <Stack key={a.login} direction="row" alignItems="center" gap={0.5}>
+              <Avatar
+                src={a.avatarUrl}
+                alt={a.login}
+                sx={{ width: 20, height: 20 }}
+              />
+              <Typography sx={{ fontSize: 12, color: "#24292f" }}>
+                {a.login}
+              </Typography>
+            </Stack>
           ))}
-        </div>
+        </Stack>
       )}
 
       {issue.labels.length > 0 && (
-        <div style={styles.labels}>
+        <Stack direction="row" flexWrap="wrap" gap={0.5}>
           {issue.labels.map((label) => (
-            <span
+            <Chip
               key={label.name}
-              style={{
-                ...styles.label,
-                background: `#${label.color}`,
+              label={label.name}
+              size="small"
+              sx={{
+                bgcolor: `#${label.color}`,
                 color: isLightColor(label.color) ? "#24292f" : "#fff",
+                fontSize: 11,
+                fontWeight: 500,
+                height: "auto",
+                "& .MuiChip-label": { px: 1, py: 0.25 },
               }}
-            >
-              {label.name}
-            </span>
+            />
           ))}
-        </div>
+        </Stack>
       )}
 
-      {issue.body && <p style={styles.body}>{issue.body}</p>}
+      {issue.body && (
+        <Typography
+          sx={{
+            fontSize: 12,
+            color: "#656d76",
+            lineHeight: 1.5,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            maxHeight: 200,
+            overflowY: "auto",
+          }}
+        >
+          {issue.body}
+        </Typography>
+      )}
 
       {onAddSubIssue && (
-        <form onSubmit={handleAddSubIssue} style={styles.form}>
-          <label style={styles.formLabel} htmlFor="sub-issue-input">
+        <Box
+          component="form"
+          onSubmit={handleAddSubIssue}
+          sx={{
+            borderTop: "1px solid #d0d7de",
+            pt: 1.5,
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.75,
+          }}
+        >
+          <Box
+            component="label"
+            htmlFor="sub-issue-input"
+            sx={{ fontSize: 12, fontWeight: 600, color: "#24292f" }}
+          >
             Add Sub-Issue
-          </label>
-          <div style={styles.formRow}>
-            <input
+          </Box>
+          <Stack direction="row" gap={0.5}>
+            <TextField
               id="sub-issue-input"
-              type="text"
+              size="small"
               placeholder="Issue #"
               value={childNumber}
               onChange={(e) => setChildNumber(e.target.value)}
-              style={styles.input}
               disabled={submitting}
+              sx={{
+                flex: 1,
+                "& .MuiInputBase-input": { fontSize: 12, py: 0.5, px: 1 },
+              }}
             />
-            <button
+            <Button
               type="submit"
-              style={styles.submitButton}
+              variant="contained"
+              color="success"
+              size="small"
               disabled={submitting || !childNumber.trim()}
+              sx={{
+                fontSize: 12,
+                minWidth: "auto",
+                px: 1.25,
+                py: 0.5,
+                textTransform: "none",
+              }}
             >
               {submitting ? "..." : "Add"}
-            </button>
-          </div>
-          {formError && <p style={styles.formError}>{formError}</p>}
-        </form>
+            </Button>
+          </Stack>
+          {formError && (
+            <Alert severity="error" sx={{ py: 0, fontSize: 11 }}>
+              {formError}
+            </Alert>
+          )}
+        </Box>
       )}
 
       {onAddBlockedBy && (
-        <form onSubmit={handleAddBlockedBy} style={styles.form}>
-          <label style={styles.formLabel} htmlFor="blocked-by-input">
+        <Box
+          component="form"
+          onSubmit={handleAddBlockedBy}
+          sx={{
+            borderTop: "1px solid #d0d7de",
+            pt: 1.5,
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.75,
+          }}
+        >
+          <Box
+            component="label"
+            htmlFor="blocked-by-input"
+            sx={{ fontSize: 12, fontWeight: 600, color: "#24292f" }}
+          >
             Add Blocked By
-          </label>
-          <div style={styles.formRow}>
-            <input
+          </Box>
+          <Stack direction="row" gap={0.5}>
+            <TextField
               id="blocked-by-input"
-              type="text"
+              size="small"
               placeholder="Issue #"
               value={blockerNumber}
               onChange={(e) => setBlockerNumber(e.target.value)}
-              style={styles.input}
               disabled={submitting}
+              sx={{
+                flex: 1,
+                "& .MuiInputBase-input": { fontSize: 12, py: 0.5, px: 1 },
+              }}
             />
-            <button
+            <Button
               type="submit"
-              style={styles.blockedByButton}
+              variant="contained"
+              color="error"
+              size="small"
               disabled={submitting || !blockerNumber.trim()}
+              sx={{
+                fontSize: 12,
+                minWidth: "auto",
+                px: 1.25,
+                py: 0.5,
+                textTransform: "none",
+              }}
             >
               {submitting ? "..." : "Add"}
-            </button>
-          </div>
-          {formError && <p style={styles.formError}>{formError}</p>}
-        </form>
+            </Button>
+          </Stack>
+          {formError && (
+            <Alert severity="error" sx={{ py: 0, fontSize: 11 }}>
+              {formError}
+            </Alert>
+          )}
+        </Box>
       )}
 
-      <a
+      <Link
         href={issue.url}
         target="_blank"
         rel="noopener noreferrer"
-        style={styles.link}
+        sx={{ color: "#0969da", fontSize: 13, textDecoration: "none" }}
       >
         View on GitHub
-      </a>
-    </div>
+      </Link>
+    </Box>
   );
 }
 
@@ -208,147 +340,3 @@ function isLightColor(hex: string): boolean {
   const b = Number.parseInt(hex.slice(4, 6), 16);
   return (r * 299 + g * 587 + b * 114) / 1000 > 128;
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  panel: {
-    width: 280,
-    padding: 16,
-    borderLeft: "1px solid #d0d7de",
-    background: "#fff",
-    overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    fontSize: 13,
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  badge: {
-    padding: "2px 8px",
-    borderRadius: 12,
-    fontSize: 12,
-    fontWeight: 600,
-  },
-  closeButton: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    fontSize: 18,
-    color: "#656d76",
-    lineHeight: 1,
-    padding: "2px 6px",
-  },
-  repoBadge: {
-    fontSize: 11,
-    color: "#656d76",
-    background: "#f6f8fa",
-    padding: "2px 6px",
-    borderRadius: 4,
-    alignSelf: "flex-start",
-    fontFamily: "monospace",
-  },
-  title: {
-    margin: 0,
-    fontSize: 15,
-    fontWeight: 600,
-    color: "#24292f",
-    lineHeight: 1.4,
-  },
-  number: {
-    color: "#656d76",
-    fontWeight: 400,
-  },
-  labels: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 4,
-  },
-  label: {
-    padding: "2px 8px",
-    borderRadius: 12,
-    fontSize: 11,
-    fontWeight: 500,
-  },
-  assignees: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  assignee: {
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-    fontSize: 12,
-    color: "#24292f",
-  },
-  avatar: {
-    width: 20,
-    height: 20,
-    borderRadius: "50%",
-  },
-  body: {
-    margin: 0,
-    fontSize: 12,
-    color: "#656d76",
-    lineHeight: 1.5,
-    whiteSpace: "pre-wrap" as const,
-    wordBreak: "break-word" as const,
-    maxHeight: 200,
-    overflowY: "auto" as const,
-  },
-  form: {
-    borderTop: "1px solid #d0d7de",
-    paddingTop: 12,
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  },
-  formLabel: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: "#24292f",
-  },
-  formRow: {
-    display: "flex",
-    gap: 4,
-  },
-  input: {
-    flex: 1,
-    padding: "4px 8px",
-    fontSize: 12,
-    border: "1px solid #d0d7de",
-    borderRadius: 4,
-    outline: "none",
-  },
-  submitButton: {
-    padding: "4px 10px",
-    fontSize: 12,
-    background: "#2da44e",
-    color: "#fff",
-    border: "none",
-    borderRadius: 4,
-    cursor: "pointer",
-  },
-  blockedByButton: {
-    padding: "4px 10px",
-    fontSize: 12,
-    background: "#cf222e",
-    color: "#fff",
-    border: "none",
-    borderRadius: 4,
-    cursor: "pointer",
-  },
-  formError: {
-    margin: 0,
-    fontSize: 11,
-    color: "#cf222e",
-  },
-  link: {
-    color: "#0969da",
-    fontSize: 13,
-    textDecoration: "none",
-  },
-};

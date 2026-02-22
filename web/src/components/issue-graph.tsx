@@ -1,3 +1,4 @@
+import { Divider, Menu, MenuItem } from "@mui/material";
 import {
   Background,
   type Connection,
@@ -517,38 +518,26 @@ function IssueGraphReady({
       >
         <Background />
       </ReactFlow>
-      {contextMenu && (
-        <div
-          style={{
-            ...graphStyles.contextMenu,
-            left: contextMenu.x,
-            top: contextMenu.y,
-          }}
-        >
-          <button
-            type="button"
-            style={graphStyles.contextMenuItem}
-            onClick={handleSelectDescendants}
-          >
-            Select Descendants
-          </button>
-          <button
-            type="button"
-            style={graphStyles.contextMenuItem}
-            onClick={handleSelectAncestors}
-          >
-            Select Ancestors
-          </button>
-          <div style={graphStyles.contextMenuDivider} />
-          <button
-            type="button"
-            style={graphStyles.contextMenuItem}
-            onClick={handleLayoutSelected}
-          >
-            Layout Selected
-          </button>
-        </div>
-      )}
+      <Menu
+        open={contextMenu !== null}
+        onClose={closeContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenu ? { top: contextMenu.y, left: contextMenu.x } : undefined
+        }
+        slotProps={{ list: { dense: true, sx: { fontSize: 12 } } }}
+      >
+        <MenuItem sx={{ fontSize: 12 }} onClick={handleSelectDescendants}>
+          Select Descendants
+        </MenuItem>
+        <MenuItem sx={{ fontSize: 12 }} onClick={handleSelectAncestors}>
+          Select Ancestors
+        </MenuItem>
+        <Divider />
+        <MenuItem sx={{ fontSize: 12 }} onClick={handleLayoutSelected}>
+          Layout Selected
+        </MenuItem>
+      </Menu>
     </div>
   );
 }
@@ -591,31 +580,5 @@ const graphStyles: Record<string, React.CSSProperties> = {
     background: "#cf222e",
     color: "#fff",
     borderColor: "#cf222e",
-  },
-  contextMenu: {
-    position: "fixed",
-    zIndex: 1000,
-    background: "#fff",
-    border: "1px solid #d0d7de",
-    borderRadius: 6,
-    boxShadow: "0 3px 12px rgba(0,0,0,0.15)",
-    padding: "4px 0",
-    minWidth: 160,
-  },
-  contextMenuItem: {
-    display: "block",
-    width: "100%",
-    padding: "6px 12px",
-    fontSize: 12,
-    border: "none",
-    background: "none",
-    cursor: "pointer",
-    color: "#24292f",
-    textAlign: "left",
-  },
-  contextMenuDivider: {
-    height: 1,
-    margin: "4px 0",
-    background: "#d0d7de",
   },
 };
