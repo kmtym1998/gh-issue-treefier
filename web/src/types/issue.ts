@@ -29,3 +29,43 @@ export interface Dependency {
   target: string;
   type: DependencyType;
 }
+
+/** Issue テンプレート */
+export interface IssueTemplate {
+  name: string;
+  body: string;
+}
+
+/** Issue 作成パラメータ */
+export interface CreateIssueParams {
+  owner: string;
+  repo: string;
+  title: string;
+  body?: string;
+  assignees?: string[];
+}
+
+/** プロジェクトフィールド値の設定パラメータ */
+export interface ProjectFieldUpdate {
+  fieldId: string;
+  value: { singleSelectOptionId: string } | { iterationId: string };
+}
+
+/** 検索結果 */
+export interface SearchResult {
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  owner: string;
+  repo: string;
+  nodeId: string;
+  isPullRequest: boolean;
+}
+
+/** コンテキストメニューの状態 */
+export interface PaneContextMenuState {
+  x: number;
+  y: number;
+  flowX: number;
+  flowY: number;
+}

@@ -33,7 +33,7 @@
   - _Requirements: コンテキストメニュー_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer with MUI experience | Task: Refactor the existing node context menu in web/src/components/issue-graph.tsx to use MUI Menu, MenuItem, and Divider instead of inline-styled div/button elements. Replace contextMenu styles (contextMenu, contextMenuItem, contextMenuDivider) with MUI components. Use MUI Menu's anchorReference="anchorPosition" with anchorPosition={{ top: y, left: x }}. Keep existing menu items: "Select Descendants", "Select Ancestors", divider, "Layout Selected". Remove the related inline style entries from the graphStyles object. | Restrictions: Do not change menu behavior or callbacks. Only change styling approach. Keep the existing onNodeContextMenu handler. | _Leverage: web/src/components/issue-graph.tsx_ | Success: Node context menu renders with MUI styling, same behavior preserved, inline context menu styles removed. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 2. 新規型定義の追加
+- [x] 2. 新規型定義の追加
   - File: `web/src/types/issue.ts`
   - `IssueTemplate`, `CreateIssueParams`, `ProjectFieldUpdate`, `SearchResult`, `PaneContextMenuState` を追加
   - Purpose: Issue 作成・検索機能で使用する TypeScript 型を定義
@@ -41,7 +41,7 @@
   - _Requirements: 全体_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: TypeScript Developer | Task: Add new type definitions to web/src/types/issue.ts as specified in design.md: IssueTemplate (name, title, body, about), CreateIssueParams (owner, repo, title, body?, assignees?), ProjectFieldUpdate (fieldId, value), SearchResult (number, title, state, owner, repo, nodeId, isPullRequest), PaneContextMenuState (x, y, flowX, flowY). | Restrictions: Do not modify existing types. Follow project naming conventions (PascalCase for types). | _Leverage: web/src/types/issue.ts, web/src/types/project.ts, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: 全体_ | Success: All types compile without errors, are exported correctly. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 3. useProjectMutations hook の作成
+- [x] 3. useProjectMutations hook の作成
   - File: `web/src/hooks/use-project-mutations.ts`
   - `addToProject(projectId, contentNodeId)`: GraphQL `addProjectV2ItemById` でプロジェクトにアイテム追加
   - `updateFieldValue(projectId, itemId, fieldId, value)`: GraphQL `updateProjectV2ItemFieldValue` でフィールド値更新
@@ -51,7 +51,7 @@
   - _Requirements: Issue の作成, 既存 Issue の追加, 既存 PR の追加_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer specializing in custom hooks | Task: Create web/src/hooks/use-project-mutations.ts with two mutation functions: (1) addToProject using GraphQL addProjectV2ItemById mutation that returns the ProjectV2 item ID, (2) updateFieldValue using GraphQL updateProjectV2ItemFieldValue mutation for SINGLE_SELECT and ITERATION field types. Follow the existing wrap pattern from use-issue-mutations.ts for error handling, loading state, and cache invalidation. | Restrictions: Do not modify existing hooks. Reuse existing api-client functions (graphql). Follow the same pattern as use-issue-mutations.ts (wrap callback, loading/error state, onSuccess callback). | _Leverage: web/src/hooks/use-issue-mutations.ts, web/src/api-client/index.ts, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: Issue の作成, 既存 Issue の追加, 既存 PR の追加_ | Success: Hook compiles, addToProject returns item ID, updateFieldValue works for SINGLE_SELECT and ITERATION types, proper error/loading states. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 4. useIssueCreation hook の作成
+- [x] 4. useIssueCreation hook の作成
   - File: `web/src/hooks/use-issue-creation.ts`
   - `createIssue(params)`: REST POST でIssue作成、レスポンスから node_id を返す
   - `fetchTemplates(owner, repo)`: GraphQL `repository.issueTemplates` でテンプレート取得
