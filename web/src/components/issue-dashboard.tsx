@@ -2,11 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cacheFlush } from "../api-client";
 import { useFilterQueryParams } from "../hooks/use-filter-query-params";
 import { useIssueMutations } from "../hooks/use-issue-mutations";
+import { useOptimisticIssues } from "../hooks/use-optimistic-issues";
+import { usePendingNodePositions } from "../hooks/use-pending-node-positions";
 import { buildIssueId, useProjectIssues } from "../hooks/use-project-issues";
-import type { Dependency, DependencyType } from "../types/issue";
+import { useProjectFields } from "../hooks/use-projects";
+import type { Dependency, DependencyType, Issue } from "../types/issue";
 import { FilterPanel, type FilterValues } from "./filter-panel";
+import { IssueCreateForm } from "./issue-create-form";
 import { IssueDetail } from "./issue-detail";
 import { IssueGraph } from "./issue-graph";
+import { ItemSearchForm } from "./item-search-form";
 
 export function IssueDashboard() {
   const { initialFilters, syncToUrl } = useFilterQueryParams();
@@ -19,6 +24,14 @@ export function IssueDashboard() {
     ...initialFilters,
   });
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  const [panelMode, setPanelMode] = useState<
+    "create-issue" | "search-issue" | "search-pr" | null
+  >(null);
+
+  // TODO: optimisticOps 関連のロジック (depKey, graphDependencies, cleanup effect,
+  // addDependency, removeDependency) を useOptimisticDependencies フックに抽出する。
+  // useOptimisticIssues と同じパターン (サーバーデータ + 楽観データのマージ + クリーンアップ)
+  // で約50行削減できる。
   const [optimisticOps, setOptimisticOps] = useState<{
     added: Dependency[];
     removed: Dependency[];
@@ -28,6 +41,9 @@ export function IssueDashboard() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const flushingRef = useRef(false);
+  const createIssueBasePositionRef = useRef<{ x: number; y: number } | null>(
+    null,
+  );
   const handleFlush = useCallback(async () => {
     if (flushingRef.current) return;
     flushingRef.current = true;
@@ -62,13 +78,32 @@ export function IssueDashboard() {
     [syncToUrl],
   );
 
-  const { issues, dependencies, loading, isRevalidating, error } =
+  const { issues, dependencies, loading, isRevalidating, error, refetch } =
     useProjectIssues({
       ...filters,
     });
 
+  const { fields: projectFields } = useProjectFields(filters.projectId);
+
   const mutations = useIssueMutations(filters.projectId);
 
+  const { allIssues, addOptimisticIssue } = useOptimisticIssues(issues);
+  const {
+    pendingNodePositions,
+    reservePosition,
+    assignReservedPosition,
+    clearReservedPosition,
+  } = usePendingNodePositions(filters.projectId, allIssues);
+
+  const repos = useMemo(
+    () => [...new Set(allIssues.map((i) => `${i.owner}/${i.repo}`))],
+    [allIssues],
+  );
+
+  // TODO: depKey は依存配列 [] の純粋関数なので useCallback で包む必要がない。
+  // コンポーネント外の plain function に変更すべき。
+  // そうすれば graphDependencies, cleanup effect, addDependency, removeDependency の
+  // deps からも除外できてコードが簡潔になる。
   const depKey = useCallback(
     (dep: Dependency) => `${dep.type}:${dep.source}->${dep.target}`,
     [],
@@ -130,6 +165,7 @@ export function IssueDashboard() {
     setMutationError(`${action}に失敗しました: ${message}`);
   }, []);
 
+  // TODO: parseIssueId を use-project-issues.ts から import する (buildIssueId の隣に定義)
   const parseIssueId = useCallback((id: string) => {
     const [ownerRepo, num] = id.split("#");
     const [owner, repo] = ownerRepo.split("/");
@@ -272,9 +308,77 @@ export function IssueDashboard() {
     [addDependency, mutations, removeDependency, reportMutationError],
   );
 
+  const handleNodeClick = useCallback((issueId: string | null) => {
+    setSelectedIssueId(issueId);
+    setPanelMode(null);
+  }, []);
+
+  const handleCreateIssue = useCallback(
+    (flowPos: { x: number; y: number }) => {
+      createIssueBasePositionRef.current = flowPos;
+      reservePosition(flowPos);
+      setSelectedIssueId(null);
+      setPanelMode("create-issue");
+    },
+    [reservePosition],
+  );
+
+  const handleAddIssue = useCallback(
+    (flowPos: { x: number; y: number }) => {
+      reservePosition(flowPos);
+      setSelectedIssueId(null);
+      setPanelMode("search-issue");
+    },
+    [reservePosition],
+  );
+
+  const handleAddPR = useCallback(
+    (flowPos: { x: number; y: number }) => {
+      reservePosition(flowPos);
+      setSelectedIssueId(null);
+      setPanelMode("search-pr");
+    },
+    [reservePosition],
+  );
+
+  // ノード高 + マージン。issue-graph.tsx の NODE_HEIGHT(40) + 間隔(60)
+  const CONTINUE_CREATE_Y_OFFSET = 100;
+
+  const handleCreateIssueSuccess = useCallback(
+    (issue: Issue, continueCreating: boolean) => {
+      assignReservedPosition(issue.id);
+      addOptimisticIssue(issue);
+      refetch();
+      if (continueCreating) {
+        const basePos = createIssueBasePositionRef.current;
+        if (basePos) {
+          const nextPos = {
+            x: basePos.x,
+            y: basePos.y + CONTINUE_CREATE_Y_OFFSET,
+          };
+          createIssueBasePositionRef.current = nextPos;
+          reservePosition(nextPos);
+        }
+      } else {
+        setPanelMode(null);
+      }
+    },
+    [assignReservedPosition, addOptimisticIssue, refetch, reservePosition],
+  );
+
+  const handleSearchFormSuccess = useCallback(() => {
+    refetch();
+    setPanelMode(null);
+  }, [refetch]);
+
+  const handleFormClose = useCallback(() => {
+    setPanelMode(null);
+    clearReservedPosition();
+  }, [clearReservedPosition]);
+
   const selectedIssue = useMemo(
-    () => issues.find((i) => i.id === selectedIssueId) ?? null,
-    [issues, selectedIssueId],
+    () => allIssues.find((i) => i.id === selectedIssueId) ?? null,
+    [allIssues, selectedIssueId],
   );
 
   const hasQuery = filters.owner !== "" && filters.projectId !== "";
@@ -300,22 +404,26 @@ export function IssueDashboard() {
             <p style={styles.error}>Error: {error.message}</p>
           )}
 
-          {hasQuery && !loading && !error && issues.length === 0 && (
+          {hasQuery && !loading && !error && allIssues.length === 0 && (
             <p style={styles.placeholder}>Issue が見つかりませんでした</p>
           )}
 
-          {hasQuery && !loading && issues.length > 0 && (
+          {hasQuery && !loading && allIssues.length > 0 && (
             <>
               {isRevalidating && (
                 <span style={styles.revalidating}>更新中...</span>
               )}
               <IssueGraph
-                issues={issues}
+                issues={allIssues}
                 dependencies={graphDependencies}
                 projectId={filters.projectId}
-                onNodeClick={setSelectedIssueId}
+                pendingNodePositions={pendingNodePositions}
+                onNodeClick={handleNodeClick}
                 onEdgeDelete={handleEdgeDelete}
                 onEdgeAdd={handleEdgeAdd}
+                onCreateIssue={handleCreateIssue}
+                onAddIssue={handleAddIssue}
+                onAddPR={handleAddPR}
               />
             </>
           )}
@@ -333,12 +441,41 @@ export function IssueDashboard() {
           </div>
         </div>
 
-        <IssueDetail
-          issue={selectedIssue}
-          onClose={() => setSelectedIssueId(null)}
-          onAddSubIssue={handleAddSubIssue}
-          onAddBlockedBy={handleAddBlockedBy}
-        />
+        {panelMode === "create-issue" && (
+          <IssueCreateForm
+            repos={repos}
+            projectId={filters.projectId}
+            projectFields={projectFields}
+            onSuccess={handleCreateIssueSuccess}
+            onClose={handleFormClose}
+          />
+        )}
+        {panelMode === "search-issue" && (
+          <ItemSearchForm
+            type="issue"
+            owner={filters.owner}
+            projectId={filters.projectId}
+            onSuccess={handleSearchFormSuccess}
+            onClose={handleFormClose}
+          />
+        )}
+        {panelMode === "search-pr" && (
+          <ItemSearchForm
+            type="pr"
+            owner={filters.owner}
+            projectId={filters.projectId}
+            onSuccess={handleSearchFormSuccess}
+            onClose={handleFormClose}
+          />
+        )}
+        {panelMode === null && (
+          <IssueDetail
+            issue={selectedIssue}
+            onClose={() => setSelectedIssueId(null)}
+            onAddSubIssue={handleAddSubIssue}
+            onAddBlockedBy={handleAddBlockedBy}
+          />
+        )}
       </div>
     </div>
   );

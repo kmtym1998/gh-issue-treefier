@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { HttpResponse, http } from "msw";
 import { expect, fn, userEvent, within } from "storybook/test";
+// TODO: mockProjects レスポンス構造が issue-dashboard.stories.tsx と重複している。
+// __mocks__/fixtures.ts に共通化すべき。
 import { FilterPanel } from "./filter-panel";
 
 const mockProjects = {
@@ -110,8 +112,16 @@ export const ChangeState: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
 
+    // MUI Select: クリックで開いてメニューアイテムを選択
     const stateSelect = canvas.getByLabelText("State");
-    await userEvent.selectOptions(stateSelect, "closed");
+    await userEvent.click(stateSelect);
+
+    const listbox = within(
+      canvasElement.ownerDocument.body.querySelector(
+        '[role="listbox"]',
+      ) as HTMLElement,
+    );
+    await userEvent.click(listbox.getByText("Closed"));
 
     expect(args.onChange).toHaveBeenCalled();
     const lastCall =
