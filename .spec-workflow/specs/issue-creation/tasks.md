@@ -101,7 +101,7 @@
   - _Requirements: 既存 Issue の追加, 既存 PR の追加_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer with MUI experience | Task: Create web/src/components/item-search-form.tsx as a right side panel form. Props: type ("issue" or "pr"), owner, projectId, onSuccess callback, onClose. Use MUI Autocomplete in async mode with useItemSearch hook for incremental search. Display results showing number, title, state, and repo. On selection, call useProjectMutations.addToProject with the selected item's nodeId. Show loading/error states. | Restrictions: Do not modify existing components. Match styling with existing issue-detail.tsx panel. Keep component focused - no issue creation logic here. | _Leverage: web/src/hooks/use-item-search.ts, web/src/hooks/use-project-mutations.ts, web/src/components/issue-detail.tsx, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: 既存 Issue の追加, 既存 PR の追加_ | Success: Search works with debounce, results display correctly, selection adds item to project, loading/error states shown. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 9. issue-graph.tsx にコンテキストメニュー統合
+- [x] 9. issue-graph.tsx にコンテキストメニュー統合
   - File: `web/src/components/issue-graph.tsx`
   - `onPaneContextMenu` ハンドラを ReactFlow に追加
   - 右クリック位置のクライアント座標と React Flow 座標を取得・保持
@@ -112,7 +112,7 @@
   - _Requirements: コンテキストメニュー_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer with React Flow experience | Task: Modify web/src/components/issue-graph.tsx to add onPaneContextMenu handler to ReactFlow. Use screenToFlowPosition to convert client coordinates to flow coordinates. Store both in PaneContextMenuState. Render PaneContextMenu component conditionally. Add new props: onCreateIssue(flowPosition), onAddIssue(flowPosition), onAddPR(flowPosition) that receive the flow position where the context menu was opened. Close context menu on pane click. | Restrictions: Do not break existing node context menu functionality. Keep existing onNodeContextMenu handler intact. Minimize changes to existing code. | _Leverage: web/src/components/issue-graph.tsx, web/src/components/pane-context-menu.tsx, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: コンテキストメニュー_ | Success: Right-click on empty area shows PaneContextMenu, right-click on node still shows existing node context menu, menu callbacks pass flow position, menu closes on selection or click. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 10. issue-dashboard.tsx にサイドパネル状態管理を統合
+- [x] 10. issue-dashboard.tsx にサイドパネル状態管理を統合
   - File: `web/src/components/issue-dashboard.tsx`
   - サイドパネルの状態を管理: `"detail"` | `"create-issue"` | `"search-issue"` | `"search-pr"` | `null`
   - コンテキストメニューからのコールバック受信、適切なフォーム表示
@@ -130,7 +130,7 @@
   - _Requirements: 全体_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with React testing experience | Task: Create unit tests for three hooks: (1) use-project-mutations.test.ts - test addToProject success/failure, updateFieldValue for SINGLE_SELECT and ITERATION, cache invalidation. (2) use-issue-creation.test.ts - test createIssue success/failure, fetchTemplates success/failure/empty, fetchCollaborators success/failure. (3) use-item-search.test.ts - test search with debounce, result parsing, error handling. Follow the existing test patterns from use-issue-mutations.test.ts using MSW for API mocking. | Restrictions: Follow existing test patterns exactly. Use MSW for mocking. Do not test implementation details, test behavior. | _Leverage: web/src/hooks/use-issue-mutations.test.ts, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: 全体_ | Success: All tests pass, cover success and failure cases, mock APIs correctly. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 12. コンポーネントの Storybook テスト
+- [x] 12. コンポーネントの Storybook テスト
   - File: `web/src/components/pane-context-menu.stories.tsx`, `web/src/components/issue-create-form.stories.tsx`, `web/src/components/item-search-form.stories.tsx`
   - 各コンポーネントの Storybook ストーリー作成
   - Purpose: コンポーネントのビジュアル確認とインタラクションテスト

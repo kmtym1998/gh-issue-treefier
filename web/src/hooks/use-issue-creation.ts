@@ -89,6 +89,7 @@ export const useIssueCreation = (): UseIssueCreationResult => {
         );
         return (result.data.repository.issueTemplates ?? []).map((t) => ({
           name: t.name,
+          title: t.title,
           body: t.body,
         }));
       } catch {

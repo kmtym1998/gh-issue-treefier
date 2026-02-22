@@ -9,13 +9,21 @@ import {
   type NodeProps,
   Position,
   ReactFlow,
+  ReactFlowProvider,
   SelectionMode,
   useNodesState,
+  useReactFlow,
 } from "@xyflow/react";
 import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getNodePositions, setNodePositions } from "../lib/cache";
-import type { Dependency, DependencyType, Issue } from "../types/issue";
+import type {
+  Dependency,
+  DependencyType,
+  Issue,
+  PaneContextMenuState,
+} from "../types/issue";
+import { PaneContextMenu } from "./pane-context-menu";
 
 import "@xyflow/react/dist/style.css";
 
@@ -214,6 +222,9 @@ export interface IssueGraphProps {
   onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
   onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
+  onCreateIssue?: (flowPosition: { x: number; y: number }) => void;
+  onAddIssue?: (flowPosition: { x: number; y: number }) => void;
+  onAddPR?: (flowPosition: { x: number; y: number }) => void;
 }
 
 export function IssueGraph(props: IssueGraphProps) {
@@ -236,6 +247,9 @@ function IssueGraphInner({
   onNodeClick,
   onEdgeDelete,
   onEdgeAdd,
+  onCreateIssue,
+  onAddIssue,
+  onAddPR,
 }: IssueGraphProps) {
   const [layoutedNodes, setLayoutedNodes] = useState<Node[] | null>(null);
 
@@ -291,14 +305,19 @@ function IssueGraphInner({
   }
 
   return (
-    <IssueGraphReady
-      projectId={projectId}
-      initialNodes={layoutedNodes}
-      edges={edges}
-      onNodeClick={onNodeClick}
-      onEdgeDelete={onEdgeDelete}
-      onEdgeAdd={onEdgeAdd}
-    />
+    <ReactFlowProvider>
+      <IssueGraphReady
+        projectId={projectId}
+        initialNodes={layoutedNodes}
+        edges={edges}
+        onNodeClick={onNodeClick}
+        onEdgeDelete={onEdgeDelete}
+        onEdgeAdd={onEdgeAdd}
+        onCreateIssue={onCreateIssue}
+        onAddIssue={onAddIssue}
+        onAddPR={onAddPR}
+      />
+    </ReactFlowProvider>
   );
 }
 
@@ -309,6 +328,9 @@ function IssueGraphReady({
   onNodeClick,
   onEdgeDelete,
   onEdgeAdd,
+  onCreateIssue,
+  onAddIssue,
+  onAddPR,
 }: {
   projectId: string;
   initialNodes: Node[];
@@ -316,6 +338,9 @@ function IssueGraphReady({
   onNodeClick?: (issueId: string | null) => void;
   onEdgeDelete?: (source: string, target: string, type: DependencyType) => void;
   onEdgeAdd?: (source: string, target: string, type: DependencyType) => void;
+  onCreateIssue?: (flowPosition: { x: number; y: number }) => void;
+  onAddIssue?: (flowPosition: { x: number; y: number }) => void;
+  onAddPR?: (flowPosition: { x: number; y: number }) => void;
 }) {
   const [connectionMode, setConnectionMode] =
     useState<DependencyType>("sub_issue");
@@ -361,6 +386,31 @@ function IssueGraphReady({
     [onNodeClick],
   );
 
+  const { screenToFlowPosition } = useReactFlow();
+
+  // --- ペインコンテキストメニュー（空白領域の右クリック） ---
+  const [paneContextMenu, setPaneContextMenu] =
+    useState<PaneContextMenuState | null>(null);
+
+  const handlePaneContextMenu = useCallback(
+    (event: MouseEvent | React.MouseEvent) => {
+      event.preventDefault();
+      const flowPos = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      setPaneContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        flowX: flowPos.x,
+        flowY: flowPos.y,
+      });
+    },
+    [screenToFlowPosition],
+  );
+
+  const closePaneContextMenu = useCallback(() => setPaneContextMenu(null), []);
+
   // --- コンテキストメニュー ---
   const [contextMenu, setContextMenu] = useState<{
     nodeId: string;
@@ -377,6 +427,11 @@ function IssueGraphReady({
   );
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const handlePaneClick = useCallback(() => {
+    closeContextMenu();
+    closePaneContextMenu();
+  }, [closeContextMenu, closePaneContextMenu]);
 
   const handleSelectDescendants = useCallback(() => {
     if (!contextMenu) return;
@@ -505,7 +560,8 @@ function IssueGraphReady({
         onNodesChange={onNodesChange}
         onSelectionChange={handleSelectionChange}
         onNodeContextMenu={handleNodeContextMenu}
-        onPaneClick={closeContextMenu}
+        onPaneContextMenu={handlePaneContextMenu}
+        onPaneClick={handlePaneClick}
         onEdgeClick={handleEdgeClick}
         onConnect={handleConnect}
         connectionLineStyle={connectionLineStyle}
@@ -518,6 +574,29 @@ function IssueGraphReady({
       >
         <Background />
       </ReactFlow>
+      <PaneContextMenu
+        open={paneContextMenu !== null}
+        anchorPosition={paneContextMenu}
+        onClose={closePaneContextMenu}
+        onCreateIssue={() => {
+          if (paneContextMenu)
+            onCreateIssue?.({
+              x: paneContextMenu.flowX,
+              y: paneContextMenu.flowY,
+            });
+        }}
+        onAddIssue={() => {
+          if (paneContextMenu)
+            onAddIssue?.({
+              x: paneContextMenu.flowX,
+              y: paneContextMenu.flowY,
+            });
+        }}
+        onAddPR={() => {
+          if (paneContextMenu)
+            onAddPR?.({ x: paneContextMenu.flowX, y: paneContextMenu.flowY });
+        }}
+      />
       <Menu
         open={contextMenu !== null}
         onClose={closeContextMenu}

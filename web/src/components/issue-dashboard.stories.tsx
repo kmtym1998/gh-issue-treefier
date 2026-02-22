@@ -110,7 +110,57 @@ const mockFields = {
   },
 };
 
+const mockCollaborators = [
+  { login: "alice", avatar_url: "https://github.com/alice.png" },
+  { login: "bob", avatar_url: "https://github.com/bob.png" },
+];
+
+const mockCreatedIssue = {
+  id: 99,
+  node_id: "I_kwDO99",
+  number: 99,
+  title: "New Issue",
+  html_url: "https://github.com/octocat/hello-world/issues/99",
+};
+
+const mockAddProject = {
+  data: { addProjectV2ItemById: { item: { id: "PVTI_new" } } },
+};
+
+const mockSearchResults = {
+  total_count: 2,
+  items: [
+    {
+      number: 10,
+      title: "Fix login bug",
+      state: "open",
+      node_id: "I_kwDO10",
+      repository_url: "https://api.github.com/repos/octocat/hello-world",
+    },
+    {
+      number: 11,
+      title: "Update documentation",
+      state: "closed",
+      node_id: "I_kwDO11",
+      repository_url: "https://api.github.com/repos/octocat/hello-world",
+    },
+  ],
+};
+
+const restHandlers = [
+  http.get("/api/github/rest/repos/:owner/:repo/collaborators", () =>
+    HttpResponse.json(mockCollaborators),
+  ),
+  http.post("/api/github/rest/repos/:owner/:repo/issues", () =>
+    HttpResponse.json(mockCreatedIssue, { status: 201 }),
+  ),
+  http.get("/api/github/rest/search/issues", () =>
+    HttpResponse.json(mockSearchResults),
+  ),
+];
+
 const handlers = [
+  ...restHandlers,
   http.post("/api/github/graphql", async ({ request }) => {
     const body = (await request.json()) as { query: string };
     if (body.query.includes("projectsV2")) {
@@ -121,6 +171,21 @@ const handlers = [
     }
     if (body.query.includes("items")) {
       return HttpResponse.json(mockProjectItems);
+    }
+    if (body.query.includes("addProjectV2ItemById")) {
+      return HttpResponse.json(mockAddProject);
+    }
+    if (body.query.includes("updateProjectV2ItemFieldValue")) {
+      return HttpResponse.json({
+        data: {
+          updateProjectV2ItemFieldValue: { projectV2Item: { id: "PVTI_new" } },
+        },
+      });
+    }
+    if (body.query.includes("issueTemplates")) {
+      return HttpResponse.json({
+        data: { repository: { issueTemplates: [] } },
+      });
     }
     return HttpResponse.json({ data: {} });
   }),
@@ -138,6 +203,7 @@ const emptyItemsResponse = {
 };
 
 const emptyHandlers = [
+  ...restHandlers,
   http.post("/api/github/graphql", async ({ request }) => {
     const body = (await request.json()) as { query: string };
     if (body.query.includes("projectsV2")) {
@@ -149,11 +215,20 @@ const emptyHandlers = [
     if (body.query.includes("items")) {
       return HttpResponse.json(emptyItemsResponse);
     }
+    if (body.query.includes("addProjectV2ItemById")) {
+      return HttpResponse.json(mockAddProject);
+    }
+    if (body.query.includes("issueTemplates")) {
+      return HttpResponse.json({
+        data: { repository: { issueTemplates: [] } },
+      });
+    }
     return HttpResponse.json({ data: {} });
   }),
 ];
 
 const errorHandlers = [
+  ...restHandlers,
   http.post("/api/github/graphql", async ({ request }) => {
     const body = (await request.json()) as { query: string };
     if (body.query.includes("projectsV2")) {
@@ -164,6 +239,14 @@ const errorHandlers = [
     }
     if (body.query.includes("items")) {
       return HttpResponse.json({ message: "Not Found" }, { status: 404 });
+    }
+    if (body.query.includes("addProjectV2ItemById")) {
+      return HttpResponse.json(mockAddProject);
+    }
+    if (body.query.includes("issueTemplates")) {
+      return HttpResponse.json({
+        data: { repository: { issueTemplates: [] } },
+      });
     }
     return HttpResponse.json({ data: {} });
   }),

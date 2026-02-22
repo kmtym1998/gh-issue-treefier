@@ -79,6 +79,7 @@ export function IssueCreateForm({
       setSelectedTemplate(templateName);
       const template = templates.find((t) => t.name === templateName);
       if (template) {
+        setTitle(template.title ?? "");
         setBody(template.body ?? "");
       }
     },

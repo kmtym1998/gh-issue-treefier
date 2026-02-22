@@ -33,6 +33,7 @@ export interface Dependency {
 /** Issue テンプレート */
 export interface IssueTemplate {
   name: string;
+  title: string;
   body: string;
 }
 

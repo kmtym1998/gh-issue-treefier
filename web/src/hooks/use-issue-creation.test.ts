@@ -115,8 +115,8 @@ describe("useIssueCreation", () => {
       });
 
       expect(templates).toEqual([
-        { name: "Bug", body: "Steps..." },
-        { name: "Feature", body: "Desc..." },
+        { name: "Bug", title: "Bug:", body: "Steps..." },
+        { name: "Feature", title: "Feat:", body: "Desc..." },
       ]);
     });
 
