@@ -41,6 +41,7 @@ export function IssueDashboard() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const flushingRef = useRef(false);
+  const createIssueBasePositionRef = useRef<{ x: number; y: number } | null>(null);
   const handleFlush = useCallback(async () => {
     if (flushingRef.current) return;
     flushingRef.current = true;
@@ -312,6 +313,7 @@ export function IssueDashboard() {
 
   const handleCreateIssue = useCallback(
     (flowPos: { x: number; y: number }) => {
+      createIssueBasePositionRef.current = flowPos;
       reservePosition(flowPos);
       setSelectedIssueId(null);
       setPanelMode("create-issue");
@@ -337,14 +339,26 @@ export function IssueDashboard() {
     [reservePosition],
   );
 
+  // ノード高 + マージン。issue-graph.tsx の NODE_HEIGHT(40) + 間隔(60)
+  const CONTINUE_CREATE_Y_OFFSET = 100;
+
   const handleCreateIssueSuccess = useCallback(
-    (issue: Issue) => {
+    (issue: Issue, continueCreating: boolean) => {
       assignReservedPosition(issue.id);
       addOptimisticIssue(issue);
-      setPanelMode(null);
       refetch();
+      if (continueCreating) {
+        const basePos = createIssueBasePositionRef.current;
+        if (basePos) {
+          const nextPos = { x: basePos.x, y: basePos.y + CONTINUE_CREATE_Y_OFFSET };
+          createIssueBasePositionRef.current = nextPos;
+          reservePosition(nextPos);
+        }
+      } else {
+        setPanelMode(null);
+      }
     },
-    [assignReservedPosition, addOptimisticIssue, refetch],
+    [assignReservedPosition, addOptimisticIssue, refetch, reservePosition],
   );
 
   const handleSearchFormSuccess = useCallback(() => {

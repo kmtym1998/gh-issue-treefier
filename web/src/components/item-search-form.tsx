@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useItemSearch } from "../hooks/use-item-search";
+import { useResizablePanel } from "../hooks/use-resizable-panel";
 import { useProjectMutations } from "../hooks/use-project-mutations";
 import type { SearchResult } from "../types/issue";
 
@@ -28,6 +29,7 @@ export function ItemSearchForm({
   onSuccess,
   onClose,
 }: ItemSearchFormProps) {
+  const { width, handleMouseDown } = useResizablePanel("panel-width:item-search-form", 400);
   const [inputValue, setInputValue] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -63,7 +65,8 @@ export function ItemSearchForm({
   return (
     <Box
       sx={{
-        width: 280,
+        position: "relative",
+        width,
         p: 2,
         borderLeft: "1px solid #d0d7de",
         bgcolor: "#fff",
@@ -72,8 +75,22 @@ export function ItemSearchForm({
         flexDirection: "column",
         gap: 1.5,
         fontSize: 13,
+        flexShrink: 0,
       }}
     >
+      <Box
+        onMouseDown={handleMouseDown}
+        sx={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          cursor: "col-resize",
+          zIndex: 1,
+          "&:hover": { bgcolor: "#0969da4d" },
+        }}
+      />
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography sx={{ fontWeight: 600, fontSize: 14, color: "#24292f" }}>
           {title}

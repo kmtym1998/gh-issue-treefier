@@ -3,7 +3,9 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   FormControl,
+  FormControlLabel,
   IconButton,
   InputLabel,
   MenuItem,
@@ -16,6 +18,7 @@ import { useCallback, useState } from "react";
 import { useIssueCreation } from "../hooks/use-issue-creation";
 import { buildIssueId } from "../hooks/use-project-issues";
 import { useProjectMutations } from "../hooks/use-project-mutations";
+import { useResizablePanel } from "../hooks/use-resizable-panel";
 import type { Issue, IssueTemplate } from "../types/issue";
 import type { ProjectField } from "../types/project";
 
@@ -23,7 +26,7 @@ export interface IssueCreateFormProps {
   repos: string[];
   projectId: string;
   projectFields: ProjectField[];
-  onSuccess: (issue: Issue) => void;
+  onSuccess: (issue: Issue, continueCreating: boolean) => void;
   onClose: () => void;
 }
 
@@ -34,6 +37,7 @@ export function IssueCreateForm({
   onSuccess,
   onClose,
 }: IssueCreateFormProps) {
+  const { width, handleMouseDown } = useResizablePanel("panel-width:issue-create-form", 400);
   const [repoInputValue, setRepoInputValue] = useState("");
   const [templates, setTemplates] = useState<IssueTemplate[]>([]);
   const [collaborators, setCollaborators] = useState<
@@ -44,6 +48,7 @@ export function IssueCreateForm({
   const [body, setBody] = useState("");
   const [assignees, setAssignees] = useState<string[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [continueCreating, setContinueCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,18 +152,26 @@ export function IssueCreateForm({
       }
 
       setSubmitting(false);
-      onSuccess({
-        id: buildIssueId(owner, repo, createdNumber),
-        number: createdNumber,
-        owner,
-        repo,
-        title: title.trim(),
-        state: "open",
-        body: body || "",
-        labels: [],
-        assignees: assignees.map((a) => ({ login: a, avatarUrl: "" })),
-        url: createdUrl,
-      });
+      if (continueCreating) {
+        setTitle("");
+        setBody("");
+        setSelectedTemplate("");
+      }
+      onSuccess(
+        {
+          id: buildIssueId(owner, repo, createdNumber),
+          number: createdNumber,
+          owner,
+          repo,
+          title: title.trim(),
+          state: "open",
+          body: body || "",
+          labels: [],
+          assignees: assignees.map((a) => ({ login: a, avatarUrl: "" })),
+          url: createdUrl,
+        },
+        continueCreating,
+      );
     },
     [
       repoInputValue,
@@ -168,6 +181,7 @@ export function IssueCreateForm({
       fieldValues,
       projectId,
       projectFields,
+      continueCreating,
       createIssue,
       addToProject,
       updateFieldValue,
@@ -184,7 +198,8 @@ export function IssueCreateForm({
       component="form"
       onSubmit={handleSubmit}
       sx={{
-        width: 280,
+        position: "relative",
+        width,
         p: 2,
         borderLeft: "1px solid #d0d7de",
         bgcolor: "#fff",
@@ -193,8 +208,22 @@ export function IssueCreateForm({
         flexDirection: "column",
         gap: 1.5,
         fontSize: 13,
+        flexShrink: 0,
       }}
     >
+      <Box
+        onMouseDown={handleMouseDown}
+        sx={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          cursor: "col-resize",
+          zIndex: 1,
+          "&:hover": { bgcolor: "#0969da4d" },
+        }}
+      />
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography sx={{ fontWeight: 600, fontSize: 14, color: "#24292f" }}>
           Issue を作成
@@ -266,7 +295,7 @@ export function IssueCreateForm({
         value={body}
         onChange={(e) => setBody(e.target.value)}
         multiline
-        minRows={3}
+        minRows={5}
         disabled={submitting}
       />
 
@@ -306,6 +335,21 @@ export function IssueCreateForm({
           </Select>
         </FormControl>
       ))}
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            size="small"
+            checked={continueCreating}
+            onChange={(e) => setContinueCreating(e.target.checked)}
+            disabled={submitting}
+          />
+        }
+        label={
+          <Typography sx={{ fontSize: 13 }}>続けて作成する</Typography>
+        }
+        sx={{ m: 0 }}
+      />
 
       <Button
         type="submit"

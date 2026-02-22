@@ -11,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import { type SubmitEvent, useCallback, useState } from "react";
+import { useResizablePanel } from "../hooks/use-resizable-panel";
 import type { Issue } from "../types/issue";
 
 export interface IssueDetailProps {
@@ -95,12 +96,15 @@ export function IssueDetail({
     [issue, onAddBlockedBy, blockerNumber],
   );
 
+  const { width, handleMouseDown } = useResizablePanel("panel-width:issue-detail", 400);
+
   if (!issue) return null;
 
   return (
     <Box
       sx={{
-        width: 280,
+        position: "relative",
+        width,
         p: 2,
         borderLeft: "1px solid #d0d7de",
         bgcolor: "#fff",
@@ -109,8 +113,22 @@ export function IssueDetail({
         flexDirection: "column",
         gap: 1.5,
         fontSize: 13,
+        flexShrink: 0,
       }}
     >
+      <Box
+        onMouseDown={handleMouseDown}
+        sx={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          cursor: "col-resize",
+          zIndex: 1,
+          "&:hover": { bgcolor: "#0969da4d" },
+        }}
+      />
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Chip
           label={issue.state}
