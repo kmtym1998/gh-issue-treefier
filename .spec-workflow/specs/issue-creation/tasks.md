@@ -70,7 +70,7 @@
   - _Requirements: 既存 Issue の追加, 既存 PR の追加_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer | Task: Create web/src/hooks/use-item-search.ts with a search function using REST GET /search/issues with query parameters (q={query}+user:{owner}+type:{issue|pr}). Implement debounce (300ms) to avoid excessive API calls during typing. Parse results into SearchResult type (number, title, state, owner, repo, nodeId, isPullRequest). Track loading and error states. | Restrictions: Do not modify existing hooks. Reuse existing api-client restGet function. Debounce should cancel previous pending requests. | _Leverage: web/src/api-client/index.ts, web/src/types/issue.ts, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: 既存 Issue の追加, 既存 PR の追加_ | Success: Search returns results matching query, debounce works correctly, loading/error states are tracked, results parse into SearchResult type. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 6. PaneContextMenu コンポーネントの作成
+- [x] 6. PaneContextMenu コンポーネントの作成
   - File: `web/src/components/pane-context-menu.tsx`
   - MUI の `Menu`, `MenuItem`, `Divider` を使用
   - 「新規作成」グループ: 「Issue を作成」
@@ -80,7 +80,7 @@
   - _Requirements: コンテキストメニュー_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer with MUI experience | Task: Create web/src/components/pane-context-menu.tsx using MUI Menu, MenuItem, ListSubheader, and Divider. The menu has two groups: "新規作成" with "Issue を作成", and "既存を追加" with "Issue を追加" and "PR を追加". Props: anchorPosition (x, y), open boolean, onClose, onCreateIssue, onAddIssue, onAddPR callbacks. Use MUI Menu's anchorReference="anchorPosition" for positioning at the right-click location. | Restrictions: Do not modify existing components. Keep component focused on menu display only (no business logic). Follow kebab-case file naming. | _Leverage: web/src/components/issue-graph.tsx, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: コンテキストメニュー_ | Success: Menu displays at right-click position with correct groups, callbacks fire correctly, menu closes on selection or click outside. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 7. IssueCreateForm コンポーネントの作成
+- [x] 7. IssueCreateForm コンポーネントの作成
   - File: `web/src/components/issue-create-form.tsx`
   - MUI の `Autocomplete`, `Select`, `TextField`, `Button`, `Alert` を使用
   - リポジトリ選択（Autocomplete freeSolo）、テンプレート選択（Select）、タイトル（TextField）、本文（TextField multiline）、Assignees（Autocomplete multiple）、プロジェクトフィールド（Select）
@@ -91,7 +91,7 @@
   - _Requirements: Issue の作成_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer with MUI forms experience | Task: Create web/src/components/issue-create-form.tsx as a right side panel form. Props: repos (string[] of owner/repo), projectId, projectFields (ProjectField[]), onSuccess callback, onClose. Use hooks: useIssueCreation for createIssue/fetchTemplates/fetchCollaborators, useProjectMutations for addToProject/updateFieldValue. Form fields: (1) Repository Autocomplete with freeSolo, (2) Template Select loaded on repo change, (3) Title TextField required, (4) Body TextField multiline, (5) Assignees Autocomplete multiple loaded on repo change, (6) Project field Selects for SINGLE_SELECT/ITERATION fields. On submit: createIssue → addToProject → updateFieldValues sequentially. Show MUI Alert on error, preserve form inputs. Show loading state on Button during submission. | Restrictions: Do not modify existing components. Match styling with existing issue-detail.tsx panel width (280px). Handle partial failures (issue created but project add fails). | _Leverage: web/src/components/issue-detail.tsx, web/src/hooks/use-issue-creation.ts, web/src/hooks/use-project-mutations.ts, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: Issue の作成_ | Success: Form displays all fields, template selection prefills title/body, submission creates issue and adds to project with field values, errors display correctly, form preserves input on error. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 8. ItemSearchForm コンポーネントの作成
+- [x] 8. ItemSearchForm コンポーネントの作成
   - File: `web/src/components/item-search-form.tsx`
   - MUI の `Autocomplete` (async) を使用してインクリメンタルサーチ
   - Issue 検索モードと PR 検索モードを props で切り替え

@@ -1,0 +1,305 @@
+import {
+  Alert,
+  Autocomplete,
+  Box,
+  Button,
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useCallback, useState } from "react";
+import { useIssueCreation } from "../hooks/use-issue-creation";
+import { useProjectMutations } from "../hooks/use-project-mutations";
+import type { IssueTemplate } from "../types/issue";
+import type { ProjectField } from "../types/project";
+
+export interface IssueCreateFormProps {
+  repos: string[];
+  projectId: string;
+  projectFields: ProjectField[];
+  onSuccess: () => void;
+  onClose: () => void;
+}
+
+export function IssueCreateForm({
+  repos,
+  projectId,
+  projectFields,
+  onSuccess,
+  onClose,
+}: IssueCreateFormProps) {
+  const [repoInputValue, setRepoInputValue] = useState("");
+  const [templates, setTemplates] = useState<IssueTemplate[]>([]);
+  const [collaborators, setCollaborators] = useState<
+    { login: string; avatarUrl: string }[]
+  >([]);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [assignees, setAssignees] = useState<string[]>([]);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { createIssue, fetchTemplates, fetchCollaborators } =
+    useIssueCreation();
+  const { addToProject, updateFieldValue } = useProjectMutations();
+
+  const selectableFields = projectFields.filter(
+    (f) => f.dataType === "SINGLE_SELECT" || f.dataType === "ITERATION",
+  );
+
+  const handleRepoSelect = useCallback(
+    async (repo: string | null) => {
+      setTemplates([]);
+      setCollaborators([]);
+      setSelectedTemplate("");
+      const r = repo ?? "";
+      if (!r) return;
+      const parts = r.split("/");
+      if (parts.length !== 2 || !parts[0] || !parts[1]) return;
+      const [owner, repoName] = parts;
+      const [fetchedTemplates, fetchedCollaborators] = await Promise.all([
+        fetchTemplates(owner, repoName),
+        fetchCollaborators(owner, repoName),
+      ]);
+      setTemplates(fetchedTemplates);
+      setCollaborators(fetchedCollaborators);
+    },
+    [fetchTemplates, fetchCollaborators],
+  );
+
+  const handleTemplateChange = useCallback(
+    (templateName: string) => {
+      setSelectedTemplate(templateName);
+      const template = templates.find((t) => t.name === templateName);
+      if (template) {
+        setBody(template.body ?? "");
+      }
+    },
+    [templates],
+  );
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const parts = repoInputValue.split("/");
+      if (parts.length !== 2 || !parts[0] || !parts[1]) return;
+      const [owner, repo] = parts;
+      if (!title.trim()) return;
+
+      setSubmitting(true);
+      setError(null);
+
+      let createdNodeId: string;
+      try {
+        const created = await createIssue({
+          owner,
+          repo,
+          title: title.trim(),
+          body: body || undefined,
+          assignees: assignees.length > 0 ? assignees : undefined,
+        });
+        createdNodeId = created.node_id;
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Issue の作成に失敗しました",
+        );
+        setSubmitting(false);
+        return;
+      }
+
+      let itemId: string;
+      try {
+        itemId = await addToProject(projectId, createdNodeId);
+      } catch (err) {
+        setError(
+          `Issue は作成されましたが、プロジェクトへの追加に失敗しました: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        setSubmitting(false);
+        return;
+      }
+
+      for (const [fieldId, optionId] of Object.entries(fieldValues)) {
+        if (!optionId) continue;
+        const field = projectFields.find((f) => f.id === fieldId);
+        if (!field) continue;
+        const value =
+          field.dataType === "SINGLE_SELECT"
+            ? { singleSelectOptionId: optionId }
+            : { iterationId: optionId };
+        try {
+          await updateFieldValue(projectId, itemId, fieldId, value);
+        } catch {
+          // フィールド更新失敗は無視して続行
+        }
+      }
+
+      setSubmitting(false);
+      onSuccess();
+    },
+    [
+      repoInputValue,
+      title,
+      body,
+      assignees,
+      fieldValues,
+      projectId,
+      projectFields,
+      createIssue,
+      addToProject,
+      updateFieldValue,
+      onSuccess,
+    ],
+  );
+
+  const repoParts = repoInputValue.split("/");
+  const isRepoValid =
+    repoParts.length === 2 && !!repoParts[0] && !!repoParts[1];
+
+  return (
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        width: 280,
+        p: 2,
+        borderLeft: "1px solid #d0d7de",
+        bgcolor: "#fff",
+        overflowY: "auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.5,
+        fontSize: 13,
+      }}
+    >
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography sx={{ fontWeight: 600, fontSize: 14, color: "#24292f" }}>
+          Issue を作成
+        </Typography>
+        <IconButton size="small" onClick={onClose} sx={{ color: "#656d76" }}>
+          ×
+        </IconButton>
+      </Stack>
+
+      {error && (
+        <Alert severity="error" sx={{ py: 0.5, fontSize: 12 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Autocomplete
+        freeSolo
+        options={repos}
+        inputValue={repoInputValue}
+        onInputChange={(_, value) => setRepoInputValue(value)}
+        onChange={(_, value) =>
+          handleRepoSelect(typeof value === "string" ? value : null)
+        }
+        size="small"
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="リポジトリ"
+            placeholder="owner/repo"
+            required
+          />
+        )}
+        disabled={submitting}
+      />
+
+      {templates.length > 0 && (
+        <FormControl size="small">
+          <InputLabel>テンプレート</InputLabel>
+          <Select
+            label="テンプレート"
+            value={selectedTemplate}
+            onChange={(e) => handleTemplateChange(e.target.value)}
+            disabled={submitting}
+          >
+            <MenuItem value="">
+              <em>なし</em>
+            </MenuItem>
+            {templates.map((t) => (
+              <MenuItem key={t.name} value={t.name}>
+                {t.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
+
+      <TextField
+        size="small"
+        label="タイトル"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        required
+        disabled={submitting}
+      />
+
+      <TextField
+        size="small"
+        label="本文"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        multiline
+        minRows={3}
+        disabled={submitting}
+      />
+
+      <Autocomplete
+        multiple
+        freeSolo
+        options={collaborators.map((c) => c.login)}
+        value={assignees}
+        onChange={(_, value) => setAssignees(value)}
+        size="small"
+        renderInput={(params) => <TextField {...params} label="Assignees" />}
+        disabled={submitting}
+      />
+
+      {selectableFields.map((field) => (
+        <FormControl key={field.id} size="small">
+          <InputLabel>{field.name}</InputLabel>
+          <Select
+            label={field.name}
+            value={fieldValues[field.id] ?? ""}
+            onChange={(e) =>
+              setFieldValues((prev) => ({
+                ...prev,
+                [field.id]: e.target.value,
+              }))
+            }
+            disabled={submitting}
+          >
+            <MenuItem value="">
+              <em>なし</em>
+            </MenuItem>
+            {field.options.map((opt) => (
+              <MenuItem key={opt.id} value={opt.id}>
+                {opt.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      ))}
+
+      <Button
+        type="submit"
+        variant="contained"
+        color="success"
+        size="small"
+        disabled={submitting || !title.trim() || !isRepoValid}
+        sx={{ textTransform: "none", fontSize: 13 }}
+      >
+        {submitting ? "作成中..." : "Issue を作成"}
+      </Button>
+    </Box>
+  );
+}
