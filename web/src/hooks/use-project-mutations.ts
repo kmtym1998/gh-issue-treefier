@@ -49,9 +49,9 @@ export interface UseProjectMutationsResult {
   error: Error | null;
 }
 
-export function useProjectMutations(
+export const useProjectMutations = (
   onSuccess?: () => void,
-): UseProjectMutationsResult {
+): UseProjectMutationsResult => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -106,4 +106,4 @@ export function useProjectMutations(
   );
 
   return { addToProject, updateFieldValue, loading, error };
-}
+};

@@ -14,11 +14,11 @@ interface GitHubSearchResponse {
   }>;
 }
 
-function parseRepoUrl(repoUrl: string): { owner: string; repo: string } {
+const parseRepoUrl = (repoUrl: string): { owner: string; repo: string } => {
   // "https://api.github.com/repos/owner/repo" → owner, repo
   const parts = repoUrl.split("/");
   return { owner: parts[parts.length - 2], repo: parts[parts.length - 1] };
-}
+};
 
 export interface UseItemSearchResult {
   results: SearchResult[];
@@ -29,7 +29,7 @@ export interface UseItemSearchResult {
 
 const DEBOUNCE_MS = 300;
 
-export function useItemSearch(): UseItemSearchResult {
+export const useItemSearch = (): UseItemSearchResult => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -97,4 +97,4 @@ export function useItemSearch(): UseItemSearchResult {
   );
 
   return { results, search, loading, error };
-}
+};

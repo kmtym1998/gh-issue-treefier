@@ -22,22 +22,21 @@ const SUPPORTED_FIELD_TYPES: Set<string> = new Set([
 /**
  * GraphQL ProjectV2 ノードを内部の Project 型に変換する。
  */
-export function parseProjects(nodes: GitHubProjectV2Node[]): Project[] {
-  return nodes.map((n) => ({
+const parseProjects = (nodes: GitHubProjectV2Node[]): Project[] =>
+  nodes.map((n) => ({
     id: n.id,
     title: n.title,
     number: n.number,
   }));
-}
 
 /**
  * GraphQL ProjectV2 フィールドノードを内部の ProjectField 型に変換する。
  * サポートしないフィールド型（ASSIGNEES, LABELS 等）は除外する。
  */
-export function parseProjectFields(
+const parseProjectFields = (
   nodes: GitHubProjectV2FieldNode[],
-): ProjectField[] {
-  return nodes
+): ProjectField[] =>
+  nodes
     .filter((n) => SUPPORTED_FIELD_TYPES.has(n.dataType))
     .map((n) => ({
       id: n.id,
@@ -45,9 +44,10 @@ export function parseProjectFields(
       dataType: n.dataType as ProjectFieldType,
       options: extractOptions(n),
     }));
-}
 
-function extractOptions(node: GitHubProjectV2FieldNode): ProjectFieldOption[] {
+const extractOptions = (
+  node: GitHubProjectV2FieldNode,
+): ProjectFieldOption[] => {
   if (node.dataType === "SINGLE_SELECT" && node.options) {
     return node.options.map((o) => ({ id: o.id, name: o.name }));
   }
@@ -58,7 +58,7 @@ function extractOptions(node: GitHubProjectV2FieldNode): ProjectFieldOption[] {
     }));
   }
   return [];
-}
+};
 
 const PROJECTS_QUERY_USER = `
   query($owner: String!) {
@@ -133,7 +133,7 @@ export interface UseProjectFieldsResult {
   error: Error | null;
 }
 
-export function useProjects(owner: string): UseProjectsResult {
+export const useProjects = (owner: string): UseProjectsResult => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -143,7 +143,7 @@ export function useProjects(owner: string): UseProjectsResult {
 
     let cancelled = false;
 
-    async function fetchProjects() {
+    const fetchProjects = async () => {
       setLoading(true);
       setError(null);
 
@@ -184,7 +184,7 @@ export function useProjects(owner: string): UseProjectsResult {
           setLoading(false);
         }
       }
-    }
+    };
 
     fetchProjects();
     return () => {
@@ -193,9 +193,9 @@ export function useProjects(owner: string): UseProjectsResult {
   }, [owner]);
 
   return { projects, loading, error };
-}
+};
 
-export function useProjectFields(projectId: string): UseProjectFieldsResult {
+export const useProjectFields = (projectId: string): UseProjectFieldsResult => {
   const [fields, setFields] = useState<ProjectField[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -205,7 +205,7 @@ export function useProjectFields(projectId: string): UseProjectFieldsResult {
 
     let cancelled = false;
 
-    async function fetchFields() {
+    const fetchFields = async () => {
       setLoading(true);
       setError(null);
 
@@ -225,7 +225,7 @@ export function useProjectFields(projectId: string): UseProjectFieldsResult {
           setLoading(false);
         }
       }
-    }
+    };
 
     fetchFields();
     return () => {
@@ -234,4 +234,4 @@ export function useProjectFields(projectId: string): UseProjectFieldsResult {
   }, [projectId]);
 
   return { fields, loading, error };
-}
+};

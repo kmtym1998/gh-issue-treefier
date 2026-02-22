@@ -71,31 +71,28 @@ interface ProjectItemsGraphQLResponse {
 /**
  * owner/repo#number 形式の複合 ID を生成する。
  */
-export function buildIssueId(
+export const buildIssueId = (
   owner: string,
   repo: string,
   number: number,
-): string {
-  return `${owner}/${repo}#${number}`;
-}
+): string => `${owner}/${repo}#${number}`;
 
 /**
  * content が Issue のデータを持つか判定する。
  * GraphQL の `... on Issue` フラグメントは DraftIssue に対して空オブジェクト `{}` を返すため、
  * null チェックだけでは不十分。`number` プロパティの存在で判定する。
  */
-function isIssueContent(
+const isIssueContent = (
   content: GitHubProjectV2Item["content"],
-): content is NonNullable<GitHubProjectV2Item["content"]> {
-  return content != null && "number" in content;
-}
+): content is NonNullable<GitHubProjectV2Item["content"]> =>
+  content != null && "number" in content;
 
 /**
  * GraphQL ProjectV2 Items から内部の Issue 型に変換する。
  * DraftIssue (content が空オブジェクトまたは null) は除外する。
  */
-export function parseProjectItems(items: GitHubProjectV2Item[]): Issue[] {
-  return items
+const parseProjectItems = (items: GitHubProjectV2Item[]): Issue[] =>
+  items
     .filter(
       (
         item,
@@ -123,15 +120,14 @@ export function parseProjectItems(items: GitHubProjectV2Item[]): Issue[] {
         url: c.url,
       };
     });
-}
 
 /**
  * GraphQL ProjectV2 Items から subIssues / blockedBy / blocking を使って依存関係を構築する。
  * blockedBy / blocking は双方向からパースし、重複は Set で排除する。
  */
-export function parseProjectDependencies(
+const parseProjectDependencies = (
   items: GitHubProjectV2Item[],
-): Dependency[] {
+): Dependency[] => {
   const deps: Dependency[] = [];
   const seen = new Set<string>();
 
@@ -158,7 +154,11 @@ export function parseProjectDependencies(
       const key = `blocked_by:${blockerId}-${currentId}`;
       if (!seen.has(key)) {
         seen.add(key);
-        deps.push({ source: blockerId, target: currentId, type: "blocked_by" });
+        deps.push({
+          source: blockerId,
+          target: currentId,
+          type: "blocked_by",
+        });
       }
     }
 
@@ -170,20 +170,24 @@ export function parseProjectDependencies(
       const key = `blocked_by:${currentId}-${blockedId}`;
       if (!seen.has(key)) {
         seen.add(key);
-        deps.push({ source: currentId, target: blockedId, type: "blocked_by" });
+        deps.push({
+          source: currentId,
+          target: blockedId,
+          type: "blocked_by",
+        });
       }
     }
   }
   return deps;
-}
+};
 
 /**
  * field フィルタに一致するか判定する。
  */
-export function matchesFieldFilters(
+const matchesFieldFilters = (
   item: GitHubProjectV2Item,
   fieldFilters: Record<string, string>,
-): boolean {
+): boolean => {
   for (const [fieldId, value] of Object.entries(fieldFilters)) {
     if (!value) continue;
     const match = item.fieldValues.nodes.some(
@@ -194,11 +198,11 @@ export function matchesFieldFilters(
     if (!match) return false;
   }
   return true;
-}
+};
 
-async function fetchAllItems(
+const fetchAllItems = async (
   projectId: string,
-): Promise<GitHubProjectV2Item[]> {
+): Promise<GitHubProjectV2Item[]> => {
   const allItems: GitHubProjectV2Item[] = [];
   let cursor: string | null = null;
   let hasNextPage = true;
@@ -216,11 +220,11 @@ async function fetchAllItems(
   }
 
   return allItems;
-}
+};
 
-export function useProjectIssues(
+export const useProjectIssues = (
   options: UseProjectIssuesOptions,
-): UseProjectIssuesResult {
+): UseProjectIssuesResult => {
   const [rawItems, setRawItems] = useState<GitHubProjectV2Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRevalidating, setIsRevalidating] = useState(false);
@@ -241,7 +245,7 @@ export function useProjectIssues(
     const forceRefetch = forceRefetchRef.current;
     forceRefetchRef.current = false;
 
-    async function fetchData() {
+    const fetchData = async () => {
       setError(null);
 
       try {
@@ -276,7 +280,7 @@ export function useProjectIssues(
           setIsRevalidating(false);
         }
       }
-    }
+    };
 
     fetchData();
     return () => {
@@ -308,4 +312,4 @@ export function useProjectIssues(
   );
 
   return { issues, dependencies, loading, isRevalidating, error, refetch };
-}
+};

@@ -10,30 +10,30 @@ interface GitHubIssue {
 /**
  * Issue 番号から REST API の issue ID を取得する。
  */
-async function fetchIssueId(
+const fetchIssueId = async (
   owner: string,
   repo: string,
   number: number,
-): Promise<number> {
+): Promise<number> => {
   const issue = await restGet<GitHubIssue>(
     `repos/${owner}/${repo}/issues/${number}`,
   );
   return issue.id;
-}
+};
 
 /**
  * Issue 番号から GraphQL 用の node_id を取得する。
  */
-async function fetchIssueNodeId(
+const fetchIssueNodeId = async (
   owner: string,
   repo: string,
   number: number,
-): Promise<string> {
+): Promise<string> => {
   const issue = await restGet<GitHubIssue>(
     `repos/${owner}/${repo}/issues/${number}`,
   );
   return issue.node_id;
-}
+};
 
 const ADD_BLOCKED_BY_MUTATION = `
   mutation($issueId: ID!, $blockingIssueId: ID!) {
@@ -63,28 +63,28 @@ const REMOVE_SUB_ISSUE_MUTATION = `
  * Sub-Issue を追加する。
  * POST /repos/{owner}/{repo}/issues/{parent_number}/sub_issues
  */
-export async function addSubIssue(
+const addSubIssue = async (
   owner: string,
   repo: string,
   parentNumber: number,
   childNumber: number,
-): Promise<void> {
+): Promise<void> => {
   const childId = await fetchIssueId(owner, repo, childNumber);
   await restPost(`repos/${owner}/${repo}/issues/${parentNumber}/sub_issues`, {
     sub_issue_id: childId,
   });
-}
+};
 
 /**
  * Sub-Issue を削除する。
  * DELETE /repos/{owner}/{repo}/issues/{parent_number}/sub_issues/{sub_issue_id}
  */
-export async function removeSubIssue(
+const removeSubIssue = async (
   owner: string,
   repo: string,
   parentNumber: number,
   childNumber: number,
-): Promise<void> {
+): Promise<void> => {
   const [issueNodeId, subIssueNodeId] = await Promise.all([
     fetchIssueNodeId(owner, repo, parentNumber),
     fetchIssueNodeId(owner, repo, childNumber),
@@ -93,18 +93,18 @@ export async function removeSubIssue(
     issueId: issueNodeId,
     subIssueId: subIssueNodeId,
   });
-}
+};
 
 /**
  * BlockedBy 関係を追加する。
  * issueNumber がブロックされている側、blockerNumber がブロックしている側。
  */
-export async function addBlockedBy(
+const addBlockedBy = async (
   owner: string,
   repo: string,
   issueNumber: number,
   blockerNumber: number,
-): Promise<void> {
+): Promise<void> => {
   const [issueNodeId, blockerNodeId] = await Promise.all([
     fetchIssueNodeId(owner, repo, issueNumber),
     fetchIssueNodeId(owner, repo, blockerNumber),
@@ -113,18 +113,18 @@ export async function addBlockedBy(
     issueId: issueNodeId,
     blockingIssueId: blockerNodeId,
   });
-}
+};
 
 /**
  * BlockedBy 関係を削除する。
  * issueNumber がブロックされている側、blockerNumber がブロックしている側。
  */
-export async function removeBlockedBy(
+const removeBlockedBy = async (
   owner: string,
   repo: string,
   issueNumber: number,
   blockerNumber: number,
-): Promise<void> {
+): Promise<void> => {
   const [issueNodeId, blockerNodeId] = await Promise.all([
     fetchIssueNodeId(owner, repo, issueNumber),
     fetchIssueNodeId(owner, repo, blockerNumber),
@@ -133,7 +133,7 @@ export async function removeBlockedBy(
     issueId: issueNodeId,
     blockingIssueId: blockerNodeId,
   });
-}
+};
 
 export interface UseIssueMutationsResult {
   addSubIssue: (
@@ -168,10 +168,10 @@ export interface UseIssueMutationsResult {
  * 依存関係の追加・削除を行うフック。
  * onSuccess が渡された場合、操作成功後に呼び出す（データの再取得用）。
  */
-export function useIssueMutations(
+export const useIssueMutations = (
   projectId?: string,
   onSuccess?: () => void,
-): UseIssueMutationsResult {
+): UseIssueMutationsResult => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -227,4 +227,4 @@ export function useIssueMutations(
     loading,
     error,
   };
-}
+};

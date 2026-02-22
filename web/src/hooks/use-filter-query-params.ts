@@ -10,7 +10,7 @@ const defaults: FilterValues = {
   fieldFilters: {},
 };
 
-export function parseQueryParams(search: string): Partial<FilterValues> {
+const parseQueryParams = (search: string): Partial<FilterValues> => {
   const params = new URLSearchParams(search);
   const result: Partial<FilterValues> = {};
 
@@ -36,9 +36,9 @@ export function parseQueryParams(search: string): Partial<FilterValues> {
   }
 
   return result;
-}
+};
 
-export function buildQueryParams(filters: FilterValues): URLSearchParams {
+const buildQueryParams = (filters: FilterValues): URLSearchParams => {
   const params = new URLSearchParams();
 
   if (filters.owner !== defaults.owner) {
@@ -57,9 +57,9 @@ export function buildQueryParams(filters: FilterValues): URLSearchParams {
   }
 
   return params;
-}
+};
 
-export function useFilterQueryParams() {
+export const useFilterQueryParams = () => {
   const initialFilters = useMemo(
     () => parseQueryParams(window.location.search),
     [],
@@ -75,4 +75,4 @@ export function useFilterQueryParams() {
   }, []);
 
   return { initialFilters, syncToUrl };
-}
+};

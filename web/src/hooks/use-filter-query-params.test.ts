@@ -1,138 +1,199 @@
-import { describe, expect, it } from "vitest";
-import { buildQueryParams, parseQueryParams } from "./use-filter-query-params";
+// @vitest-environment jsdom
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
+import { useFilterQueryParams } from "./use-filter-query-params";
 
-describe("parseQueryParams", () => {
-  it("returns empty object for empty search string", () => {
-    expect(parseQueryParams("")).toEqual({});
-  });
-
-  it("parses owner", () => {
-    expect(parseQueryParams("?owner=octocat")).toEqual({ owner: "octocat" });
-  });
-
-  it("parses state", () => {
-    expect(parseQueryParams("?state=closed")).toEqual({ state: "closed" });
-    expect(parseQueryParams("?state=all")).toEqual({ state: "all" });
-  });
-
-  it("ignores state=open since it is the default", () => {
-    expect(parseQueryParams("?state=open")).toEqual({ state: "open" });
-  });
-
-  it("ignores invalid state values", () => {
-    expect(parseQueryParams("?state=invalid")).toEqual({});
-  });
-
-  it("parses project_id", () => {
-    expect(parseQueryParams("?project_id=PVT_123")).toEqual({
-      projectId: "PVT_123",
-    });
-  });
-
-  it("parses field filters", () => {
-    expect(parseQueryParams("?field.Status=abc&field.Priority=high")).toEqual({
-      fieldFilters: { Status: "abc", Priority: "high" },
-    });
-  });
-
-  it("ignores empty field filter values", () => {
-    expect(parseQueryParams("?field.Status=")).toEqual({});
-  });
-
-  it("parses all parameters together", () => {
-    const search =
-      "?owner=octocat&state=closed&project_id=PVT_1&field.Status=done";
-    expect(parseQueryParams(search)).toEqual({
-      owner: "octocat",
-      state: "closed",
-      projectId: "PVT_1",
-      fieldFilters: { Status: "done" },
-    });
-  });
+beforeEach(() => {
+  window.history.replaceState(null, "", "/");
 });
 
-describe("buildQueryParams", () => {
-  it("returns empty params for all defaults", () => {
-    const params = buildQueryParams({
-      owner: "",
-      state: "open",
-      projectId: "",
-      fieldFilters: {},
+describe("useFilterQueryParams", () => {
+  describe("initialFilters", () => {
+    it("returns empty object for empty search string", () => {
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({});
     });
-    expect(params.toString()).toBe("");
+
+    it("parses owner", () => {
+      window.history.replaceState(null, "", "?owner=octocat");
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({ owner: "octocat" });
+    });
+
+    it("parses state=closed", () => {
+      window.history.replaceState(null, "", "?state=closed");
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({ state: "closed" });
+    });
+
+    it("parses state=all", () => {
+      window.history.replaceState(null, "", "?state=all");
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({ state: "all" });
+    });
+
+    it("parses state=open", () => {
+      window.history.replaceState(null, "", "?state=open");
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({ state: "open" });
+    });
+
+    it("ignores invalid state values", () => {
+      window.history.replaceState(null, "", "?state=invalid");
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({});
+    });
+
+    it("parses project_id", () => {
+      window.history.replaceState(null, "", "?project_id=PVT_123");
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({ projectId: "PVT_123" });
+    });
+
+    it("parses field filters", () => {
+      window.history.replaceState(
+        null,
+        "",
+        "?field.Status=abc&field.Priority=high",
+      );
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({
+        fieldFilters: { Status: "abc", Priority: "high" },
+      });
+    });
+
+    it("ignores empty field filter values", () => {
+      window.history.replaceState(null, "", "?field.Status=");
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({});
+    });
+
+    it("parses all parameters together", () => {
+      window.history.replaceState(
+        null,
+        "",
+        "?owner=octocat&state=closed&project_id=PVT_1&field.Status=done",
+      );
+      const { result } = renderHook(() => useFilterQueryParams());
+      expect(result.current.initialFilters).toEqual({
+        owner: "octocat",
+        state: "closed",
+        projectId: "PVT_1",
+        fieldFilters: { Status: "done" },
+      });
+    });
   });
 
-  it("includes owner when non-empty", () => {
-    const params = buildQueryParams({
-      owner: "octocat",
-      state: "open",
-      projectId: "",
-      fieldFilters: {},
+  describe("syncToUrl", () => {
+    it("sets empty params for all defaults", () => {
+      const { result } = renderHook(() => useFilterQueryParams());
+      act(() => {
+        result.current.syncToUrl({
+          owner: "",
+          state: "open",
+          projectId: "",
+          fieldFilters: {},
+        });
+      });
+      expect(window.location.search).toBe("");
     });
-    expect(params.get("owner")).toBe("octocat");
-    expect(params.has("state")).toBe(false);
-  });
 
-  it("includes state when not open", () => {
-    const params = buildQueryParams({
-      owner: "",
-      state: "closed",
-      projectId: "",
-      fieldFilters: {},
+    it("includes owner when non-empty", () => {
+      const { result } = renderHook(() => useFilterQueryParams());
+      act(() => {
+        result.current.syncToUrl({
+          owner: "octocat",
+          state: "open",
+          projectId: "",
+          fieldFilters: {},
+        });
+      });
+      expect(window.location.search).toBe("?owner=octocat");
     });
-    expect(params.get("state")).toBe("closed");
-  });
 
-  it("omits state when open (default)", () => {
-    const params = buildQueryParams({
-      owner: "",
-      state: "open",
-      projectId: "",
-      fieldFilters: {},
+    it("includes state when not open", () => {
+      const { result } = renderHook(() => useFilterQueryParams());
+      act(() => {
+        result.current.syncToUrl({
+          owner: "",
+          state: "closed",
+          projectId: "",
+          fieldFilters: {},
+        });
+      });
+      expect(window.location.search).toBe("?state=closed");
     });
-    expect(params.has("state")).toBe(false);
-  });
 
-  it("includes project_id when non-empty", () => {
-    const params = buildQueryParams({
-      owner: "",
-      state: "open",
-      projectId: "PVT_1",
-      fieldFilters: {},
+    it("omits state when open (default)", () => {
+      const { result } = renderHook(() => useFilterQueryParams());
+      act(() => {
+        result.current.syncToUrl({
+          owner: "",
+          state: "open",
+          projectId: "",
+          fieldFilters: {},
+        });
+      });
+      expect(window.location.search).toBe("");
     });
-    expect(params.get("project_id")).toBe("PVT_1");
-  });
 
-  it("includes field filters with field. prefix", () => {
-    const params = buildQueryParams({
-      owner: "",
-      state: "open",
-      projectId: "",
-      fieldFilters: { Status: "done", Priority: "high" },
+    it("includes project_id when non-empty", () => {
+      const { result } = renderHook(() => useFilterQueryParams());
+      act(() => {
+        result.current.syncToUrl({
+          owner: "",
+          state: "open",
+          projectId: "PVT_1",
+          fieldFilters: {},
+        });
+      });
+      expect(window.location.search).toBe("?project_id=PVT_1");
     });
-    expect(params.get("field.Status")).toBe("done");
-    expect(params.get("field.Priority")).toBe("high");
-  });
 
-  it("omits empty field filter values", () => {
-    const params = buildQueryParams({
-      owner: "",
-      state: "open",
-      projectId: "",
-      fieldFilters: { Status: "", Priority: "high" },
+    it("includes field filters with field. prefix", () => {
+      const { result } = renderHook(() => useFilterQueryParams());
+      act(() => {
+        result.current.syncToUrl({
+          owner: "",
+          state: "open",
+          projectId: "",
+          fieldFilters: { Status: "done", Priority: "high" },
+        });
+      });
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get("field.Status")).toBe("done");
+      expect(params.get("field.Priority")).toBe("high");
     });
-    expect(params.has("field.Status")).toBe(false);
-    expect(params.get("field.Priority")).toBe("high");
-  });
 
-  it("round-trips with parseQueryParams", () => {
-    const filters = {
-      owner: "octocat",
-      state: "closed" as const,
-      projectId: "PVT_1",
-      fieldFilters: { Status: "done" },
-    };
-    const qs = `?${buildQueryParams(filters).toString()}`;
-    expect(parseQueryParams(qs)).toEqual(filters);
+    it("omits empty field filter values", () => {
+      const { result } = renderHook(() => useFilterQueryParams());
+      act(() => {
+        result.current.syncToUrl({
+          owner: "",
+          state: "open",
+          projectId: "",
+          fieldFilters: { Status: "", Priority: "high" },
+        });
+      });
+      const params = new URLSearchParams(window.location.search);
+      expect(params.has("field.Status")).toBe(false);
+      expect(params.get("field.Priority")).toBe("high");
+    });
+
+    it("round-trips: syncToUrl then new hook reads back same values", () => {
+      const filters = {
+        owner: "octocat",
+        state: "closed" as const,
+        projectId: "PVT_1",
+        fieldFilters: { Status: "done" },
+      };
+      const { result: r1 } = renderHook(() => useFilterQueryParams());
+      act(() => {
+        r1.current.syncToUrl(filters);
+      });
+
+      const { result: r2 } = renderHook(() => useFilterQueryParams());
+      expect(r2.current.initialFilters).toEqual(filters);
+    });
   });
 });

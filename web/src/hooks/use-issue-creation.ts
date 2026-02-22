@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { graphql, restGet, restPost } from "../api-client";
 import type { CreateIssueParams, IssueTemplate } from "../types/issue";
 
-interface CreatedIssue {
+export interface CreatedIssue {
   id: number;
   node_id: string;
   number: number;
@@ -52,7 +52,7 @@ export interface UseIssueCreationResult {
   error: Error | null;
 }
 
-export function useIssueCreation(): UseIssueCreationResult {
+export const useIssueCreation = (): UseIssueCreationResult => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -61,7 +61,7 @@ export function useIssueCreation(): UseIssueCreationResult {
       setLoading(true);
       setError(null);
       try {
-        const result = await restPost<CreatedIssue>(
+        return await restPost<CreatedIssue>(
           `repos/${params.owner}/${params.repo}/issues`,
           {
             title: params.title,
@@ -69,7 +69,6 @@ export function useIssueCreation(): UseIssueCreationResult {
             assignees: params.assignees,
           },
         );
-        return result;
       } catch (err) {
         const e = err instanceof Error ? err : new Error(String(err));
         setError(e);
@@ -120,4 +119,4 @@ export function useIssueCreation(): UseIssueCreationResult {
   );
 
   return { createIssue, fetchTemplates, fetchCollaborators, loading, error };
-}
+};
