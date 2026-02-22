@@ -61,7 +61,7 @@
   - _Requirements: Issue の作成_
   - _Prompt: Implement the task for spec issue-creation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer specializing in custom hooks and GitHub API | Task: Create web/src/hooks/use-issue-creation.ts with three functions: (1) createIssue using REST POST /repos/{owner}/{repo}/issues returning the created issue including node_id, (2) fetchTemplates using GraphQL repository.issueTemplates query returning name/title/body/about fields, (3) fetchCollaborators using REST GET /repos/{owner}/{repo}/collaborators returning login and avatarUrl. Handle errors gracefully - template fetch failure should not block issue creation, collaborator fetch failure should allow manual input. | Restrictions: Do not modify existing hooks. Reuse existing api-client functions (restPost, restGet, graphql). Template fetch errors should be silently handled. | _Leverage: web/src/hooks/use-issue-mutations.ts, web/src/api-client/index.ts, .spec-workflow/specs/issue-creation/design.md_ | _Requirements: Issue の作成_ | Success: createIssue creates issue and returns node_id, fetchTemplates returns templates or empty array on error, fetchCollaborators returns collaborators or empty array on error. | After completing the task, mark it as in-progress in tasks.md before starting, log the implementation with log-implementation tool, then mark as complete._
 
-- [ ] 5. useItemSearch hook の作成
+- [x] 5. useItemSearch hook の作成
   - File: `web/src/hooks/use-item-search.ts`
   - `search(query, owner, type)`: REST GET `/search/issues` で Issue/PR を検索
   - デバウンス処理、ローディング・エラー状態管理
