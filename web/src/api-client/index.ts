@@ -49,6 +49,14 @@ export function restPost<T = unknown>(path: string, body: unknown): Promise<T> {
   });
 }
 
+export function restPatch<T = unknown>(path: string, body: unknown): Promise<T> {
+  return request<T>(`/api/github/rest/${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export function restDelete<T = unknown>(path: string): Promise<T> {
   return request<T>(`/api/github/rest/${path}`, {
     method: "DELETE",

@@ -371,6 +371,10 @@ export function IssueDashboard() {
     setPanelMode(null);
   }, [refetch]);
 
+  const handleIssueUpdate = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   const handleFormClose = useCallback(() => {
     setPanelMode(null);
     clearReservedPosition();
@@ -475,6 +479,9 @@ export function IssueDashboard() {
             onClose={() => setSelectedIssueId(null)}
             onAddSubIssue={handleAddSubIssue}
             onAddBlockedBy={handleAddBlockedBy}
+            onUpdate={handleIssueUpdate}
+            projectId={filters.projectId}
+            projectFields={projectFields}
           />
         )}
       </div>

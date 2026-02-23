@@ -41,6 +41,7 @@ export const Open: Story = {
         { login: "bob", avatarUrl: "https://github.com/bob.png" },
       ],
       url: "https://github.com/owner/repo/issues/42",
+      fieldValues: {},
     },
   },
   play: async ({ canvasElement }) => {
@@ -79,6 +80,7 @@ export const Closed: Story = {
         { login: "carol", avatarUrl: "https://github.com/carol.png" },
       ],
       url: "https://github.com/owner/repo/issues/7",
+      fieldValues: {},
     },
   },
   play: async ({ canvasElement }) => {
@@ -103,6 +105,7 @@ export const NoLabels: Story = {
       labels: [],
       assignees: [],
       url: "https://github.com/owner/repo/issues/100",
+      fieldValues: {},
     },
   },
   play: async ({ canvasElement }) => {
@@ -137,6 +140,7 @@ export const WithAddSubIssueForm: Story = {
       labels: [],
       assignees: [],
       url: "https://github.com/owner/repo/issues/42",
+      fieldValues: {},
     },
     onAddSubIssue: fn(() => Promise.resolve()),
   },
@@ -181,6 +185,7 @@ export const WithoutAddSubIssueForm: Story = {
       labels: [],
       assignees: [],
       url: "https://github.com/owner/repo/issues/42",
+      fieldValues: {},
     },
   },
   play: async ({ canvasElement }) => {
@@ -204,6 +209,7 @@ export const CrossRepo: Story = {
       labels: [{ name: "api", color: "0075ca" }],
       assignees: [],
       url: "https://github.com/org/backend/issues/15",
+      fieldValues: {},
     },
   },
   play: async ({ canvasElement }) => {

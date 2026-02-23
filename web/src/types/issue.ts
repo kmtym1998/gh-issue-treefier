@@ -1,5 +1,6 @@
 export interface Issue {
   id: string; // "owner/repo#number" 形式の複合 ID
+  itemId?: string; // ProjectV2 item ID (PVTI_...)
   number: number;
   owner: string;
   repo: string;

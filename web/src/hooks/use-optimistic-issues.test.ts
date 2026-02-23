@@ -17,6 +17,7 @@ const makeIssue = (id: string, title = "test"): Issue => ({
   labels: [],
   assignees: [],
   url: `https://github.com/owner/repo/issues/1`,
+  fieldValues: {},
 });
 
 describe("useOptimisticIssues", () => {

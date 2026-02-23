@@ -121,6 +121,7 @@ const parseProjectItems = (items: GitHubProjectV2Item[]): Issue[] =>
       }
       return {
         id: buildIssueId(owner, repo, c.number),
+        itemId: item.id,
         number: c.number,
         owner,
         repo,

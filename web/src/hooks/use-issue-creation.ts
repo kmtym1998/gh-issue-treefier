@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { graphql, restGet, restPost } from "../api-client";
+import { graphql, restGet, restPatch, restPost } from "../api-client";
 import type { CreateIssueParams, IssueTemplate } from "../types/issue";
 
 export interface CreatedIssue {
@@ -41,8 +41,18 @@ const ISSUE_TEMPLATES_QUERY = `
   }
 `;
 
+export interface UpdateIssueParams {
+  owner: string;
+  repo: string;
+  number: number;
+  title: string;
+  body?: string;
+  assignees?: string[];
+}
+
 export interface UseIssueCreationResult {
   createIssue: (params: CreateIssueParams) => Promise<CreatedIssue>;
+  updateIssue: (params: UpdateIssueParams) => Promise<CreatedIssue>;
   fetchTemplates: (owner: string, repo: string) => Promise<IssueTemplate[]>;
   fetchCollaborators: (
     owner: string,
@@ -63,6 +73,30 @@ export const useIssueCreation = (): UseIssueCreationResult => {
       try {
         return await restPost<CreatedIssue>(
           `repos/${params.owner}/${params.repo}/issues`,
+          {
+            title: params.title,
+            body: params.body,
+            assignees: params.assignees,
+          },
+        );
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        setError(e);
+        throw e;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  const updateIssue = useCallback(
+    async (params: UpdateIssueParams): Promise<CreatedIssue> => {
+      setLoading(true);
+      setError(null);
+      try {
+        return await restPatch<CreatedIssue>(
+          `repos/${params.owner}/${params.repo}/issues/${params.number}`,
           {
             title: params.title,
             body: params.body,
@@ -119,5 +153,5 @@ export const useIssueCreation = (): UseIssueCreationResult => {
     [],
   );
 
-  return { createIssue, fetchTemplates, fetchCollaborators, loading, error };
+  return { createIssue, updateIssue, fetchTemplates, fetchCollaborators, loading, error };
 };

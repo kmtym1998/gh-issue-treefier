@@ -22,6 +22,7 @@ import { useResizablePanel } from "../hooks/use-resizable-panel";
 import { useViewer } from "../hooks/use-viewer";
 import type { Issue, IssueTemplate } from "../types/issue";
 import type { ProjectField } from "../types/project";
+import { IssueFormFields } from "./issue-form-fields";
 
 export interface IssueCreateFormProps {
   repos: string[];
@@ -69,10 +70,6 @@ export function IssueCreateForm({
       setAssignees([viewerLogin]);
     }
   }, [viewerLogin]);
-
-  const selectableFields = projectFields.filter(
-    (f) => f.dataType === "SINGLE_SELECT" || f.dataType === "ITERATION",
-  );
 
   const handleRepoSelect = useCallback(
     async (repo: string | null) => {
@@ -300,63 +297,19 @@ export function IssueCreateForm({
         </FormControl>
       )}
 
-      <TextField
-        size="small"
-        label="タイトル"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        required
+      <IssueFormFields
+        collaborators={collaborators}
+        projectFields={projectFields}
+        title={title}
+        body={body}
+        assignees={assignees}
+        fieldValues={fieldValues}
+        onTitleChange={setTitle}
+        onBodyChange={setBody}
+        onAssigneesChange={setAssignees}
+        onFieldValuesChange={setFieldValues}
         disabled={submitting || !isRepoValid}
       />
-
-      <TextField
-        size="small"
-        label="本文"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        multiline
-        minRows={5}
-        disabled={submitting || !isRepoValid}
-      />
-
-      <Autocomplete
-        multiple
-        freeSolo
-        openOnFocus
-        options={collaborators.map((c) => c.login)}
-        value={assignees}
-        onChange={(_, value) => setAssignees(value)}
-        size="small"
-        renderInput={(params) => <TextField {...params} label="Assignees" />}
-        disabled={submitting || !isRepoValid}
-        noOptionsText="リポジトリを選択してください"
-      />
-
-      {selectableFields.map((field) => (
-        <FormControl key={field.id} size="small">
-          <InputLabel>{field.name}</InputLabel>
-          <Select
-            label={field.name}
-            value={fieldValues[field.id] ?? ""}
-            onChange={(e) =>
-              setFieldValues((prev) => ({
-                ...prev,
-                [field.id]: e.target.value,
-              }))
-            }
-            disabled={submitting || !isRepoValid}
-          >
-            <MenuItem value="">
-              <em>なし</em>
-            </MenuItem>
-            {field.options.map((opt) => (
-              <MenuItem key={opt.id} value={opt.id}>
-                {opt.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      ))}
 
       <FormControlLabel
         control={

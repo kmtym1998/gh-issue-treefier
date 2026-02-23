@@ -22,6 +22,7 @@ const makeIssue = (id: string): Issue => ({
   labels: [],
   assignees: [],
   url: "https://github.com/owner/repo/issues/1",
+  fieldValues: {},
 });
 
 beforeEach(() => {

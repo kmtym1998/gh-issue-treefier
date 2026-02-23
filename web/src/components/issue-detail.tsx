@@ -11,8 +11,12 @@ import {
   Typography,
 } from "@mui/material";
 import { type SubmitEvent, useCallback, useState } from "react";
+import { useIssueCreation } from "../hooks/use-issue-creation";
+import { useProjectMutations } from "../hooks/use-project-mutations";
 import { useResizablePanel } from "../hooks/use-resizable-panel";
 import type { Issue } from "../types/issue";
+import type { ProjectField } from "../types/project";
+import { IssueFormFields } from "./issue-form-fields";
 
 export interface IssueDetailProps {
   issue: Issue | null;
@@ -29,6 +33,9 @@ export interface IssueDetailProps {
     issueNumber: number,
     blockerNumber: number,
   ) => Promise<void>;
+  onUpdate?: (issue: Issue) => void;
+  projectId?: string;
+  projectFields?: ProjectField[];
 }
 
 export function IssueDetail({
@@ -36,11 +43,28 @@ export function IssueDetail({
   onClose,
   onAddSubIssue,
   onAddBlockedBy,
+  onUpdate,
+  projectId,
+  projectFields,
 }: IssueDetailProps) {
   const [childNumber, setChildNumber] = useState("");
   const [blockerNumber, setBlockerNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [editAssignees, setEditAssignees] = useState<string[]>([]);
+  const [editFieldValues, setEditFieldValues] = useState<Record<string, string>>({});
+  const [editCollaborators, setEditCollaborators] = useState<
+    { login: string; avatarUrl: string }[]
+  >([]);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const { updateIssue, fetchCollaborators } = useIssueCreation();
+  const { updateFieldValue } = useProjectMutations();
 
   const handleAddSubIssue = useCallback(
     async (e: SubmitEvent) => {
@@ -96,6 +120,88 @@ export function IssueDetail({
     [issue, onAddBlockedBy, blockerNumber],
   );
 
+  const handleEditStart = useCallback(async () => {
+    if (!issue) return;
+    setEditTitle(issue.title);
+    setEditBody(issue.body);
+    setEditAssignees(issue.assignees.map((a) => a.login));
+    setEditFieldValues(issue.fieldValues);
+    setEditError(null);
+    setEditing(true);
+    const collaborators = await fetchCollaborators(issue.owner, issue.repo);
+    setEditCollaborators(collaborators);
+  }, [issue, fetchCollaborators]);
+
+  const handleEditCancel = useCallback(() => {
+    setEditing(false);
+    setEditError(null);
+  }, []);
+
+  const handleEditSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!issue || !onUpdate) return;
+      if (!editTitle.trim()) return;
+
+      setEditSubmitting(true);
+      setEditError(null);
+      try {
+        await updateIssue({
+          owner: issue.owner,
+          repo: issue.repo,
+          number: issue.number,
+          title: editTitle.trim(),
+          body: editBody || undefined,
+          assignees: editAssignees.length > 0 ? editAssignees : [],
+        });
+
+        if (issue.itemId && projectId && projectFields) {
+          for (const [fieldId, optionId] of Object.entries(editFieldValues)) {
+            if (!optionId) continue;
+            const field = projectFields.find((f) => f.id === fieldId);
+            if (!field) continue;
+            const value =
+              field.dataType === "SINGLE_SELECT"
+                ? { singleSelectOptionId: optionId }
+                : { iterationId: optionId };
+            try {
+              await updateFieldValue(projectId, issue.itemId, fieldId, value);
+            } catch {
+              // フィールド更新失敗は無視して続行
+            }
+          }
+        }
+
+        onUpdate({
+          ...issue,
+          title: editTitle.trim(),
+          body: editBody,
+          assignees: editAssignees.map((login) => ({ login, avatarUrl: "" })),
+          fieldValues: editFieldValues,
+        });
+        setEditing(false);
+      } catch (err) {
+        setEditError(
+          err instanceof Error ? err.message : "Issue の更新に失敗しました",
+        );
+      } finally {
+        setEditSubmitting(false);
+      }
+    },
+    [
+      issue,
+      onUpdate,
+      editTitle,
+      editBody,
+      editAssignees,
+      editFieldValues,
+      projectId,
+      projectFields,
+      updateIssue,
+      updateFieldValue,
+    ],
+  );
+
   const { width, handleMouseDown } = useResizablePanel(
     "panel-width:issue-detail",
     400,
@@ -143,9 +249,21 @@ export function IssueDetail({
             fontSize: 12,
           }}
         />
-        <IconButton size="small" onClick={onClose} sx={{ color: "#656d76" }}>
-          ×
-        </IconButton>
+        <Stack direction="row" alignItems="center" gap={0.5}>
+          {onUpdate && !editing && (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={handleEditStart}
+              sx={{ fontSize: 12, textTransform: "none", py: 0.25, px: 1 }}
+            >
+              編集
+            </Button>
+          )}
+          <IconButton size="small" onClick={onClose} sx={{ color: "#656d76" }}>
+            ×
+          </IconButton>
+        </Stack>
       </Stack>
 
       <Chip
@@ -162,75 +280,140 @@ export function IssueDetail({
         }}
       />
 
-      <Typography
-        variant="subtitle1"
-        sx={{
-          fontWeight: 600,
-          fontSize: 15,
-          color: "#24292f",
-          lineHeight: 1.4,
-        }}
-      >
-        <Typography
-          component="span"
-          sx={{ color: "#656d76", fontWeight: 400, fontSize: "inherit" }}
-        >
-          #{issue.number}
-        </Typography>{" "}
-        {issue.title}
-      </Typography>
-
-      {issue.assignees.length > 0 && (
-        <Stack direction="row" flexWrap="wrap" gap={0.75}>
-          {issue.assignees.map((a) => (
-            <Stack key={a.login} direction="row" alignItems="center" gap={0.5}>
-              <Avatar
-                src={a.avatarUrl}
-                alt={a.login}
-                sx={{ width: 20, height: 20 }}
-              />
-              <Typography sx={{ fontSize: 12, color: "#24292f" }}>
-                {a.login}
-              </Typography>
-            </Stack>
-          ))}
-        </Stack>
-      )}
-
-      {issue.labels.length > 0 && (
-        <Stack direction="row" flexWrap="wrap" gap={0.5}>
-          {issue.labels.map((label) => (
-            <Chip
-              key={label.name}
-              label={label.name}
-              size="small"
-              sx={{
-                bgcolor: `#${label.color}`,
-                color: isLightColor(label.color) ? "#24292f" : "#fff",
-                fontSize: 11,
-                fontWeight: 500,
-                height: "auto",
-                "& .MuiChip-label": { px: 1, py: 0.25 },
-              }}
-            />
-          ))}
-        </Stack>
-      )}
-
-      {issue.body && (
-        <Typography
+      {editing ? (
+        <Box
+          component="form"
+          onSubmit={handleEditSubmit}
           sx={{
-            fontSize: 12,
-            color: "#656d76",
-            lineHeight: 1.5,
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            maxHeight: 200,
-            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+            "& .MuiOutlinedInput-root.Mui-disabled": { bgcolor: "#f6f8fa" },
+            "& .MuiInputBase-input.Mui-disabled": {
+              WebkitTextFillColor: "#8c959f",
+            },
+            "& .MuiFormLabel-root.Mui-disabled": { color: "#8c959f" },
           }}
         >
-          {issue.body}
-        </Typography>
+          {editError && (
+            <Alert severity="error" sx={{ py: 0.5, fontSize: 12 }}>
+              {editError}
+            </Alert>
+          )}
+          <IssueFormFields
+            collaborators={editCollaborators}
+            projectFields={projectFields ?? []}
+            title={editTitle}
+            body={editBody}
+            assignees={editAssignees}
+            fieldValues={editFieldValues}
+            onTitleChange={setEditTitle}
+            onBodyChange={setEditBody}
+            onAssigneesChange={setEditAssignees}
+            onFieldValuesChange={setEditFieldValues}
+            disabled={editSubmitting}
+          />
+          <Stack direction="row" gap={1}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="success"
+              size="small"
+              disabled={editSubmitting || !editTitle.trim()}
+              sx={{ textTransform: "none", fontSize: 13, flex: 1 }}
+            >
+              {editSubmitting ? "保存中..." : "保存"}
+            </Button>
+            <Button
+              type="button"
+              variant="outlined"
+              size="small"
+              onClick={handleEditCancel}
+              disabled={editSubmitting}
+              sx={{ textTransform: "none", fontSize: 13 }}
+            >
+              キャンセル
+            </Button>
+          </Stack>
+        </Box>
+      ) : (
+        <>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 600,
+              fontSize: 15,
+              color: "#24292f",
+              lineHeight: 1.4,
+            }}
+          >
+            <Typography
+              component="span"
+              sx={{ color: "#656d76", fontWeight: 400, fontSize: "inherit" }}
+            >
+              #{issue.number}
+            </Typography>{" "}
+            {issue.title}
+          </Typography>
+
+          {issue.assignees.length > 0 && (
+            <Stack direction="row" flexWrap="wrap" gap={0.75}>
+              {issue.assignees.map((a) => (
+                <Stack
+                  key={a.login}
+                  direction="row"
+                  alignItems="center"
+                  gap={0.5}
+                >
+                  <Avatar
+                    src={a.avatarUrl}
+                    alt={a.login}
+                    sx={{ width: 20, height: 20 }}
+                  />
+                  <Typography sx={{ fontSize: 12, color: "#24292f" }}>
+                    {a.login}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          )}
+
+          {issue.labels.length > 0 && (
+            <Stack direction="row" flexWrap="wrap" gap={0.5}>
+              {issue.labels.map((label) => (
+                <Chip
+                  key={label.name}
+                  label={label.name}
+                  size="small"
+                  sx={{
+                    bgcolor: `#${label.color}`,
+                    color: isLightColor(label.color) ? "#24292f" : "#fff",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    height: "auto",
+                    "& .MuiChip-label": { px: 1, py: 0.25 },
+                  }}
+                />
+              ))}
+            </Stack>
+          )}
+
+          {issue.body && (
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: "#656d76",
+                lineHeight: 1.5,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                maxHeight: 200,
+                overflowY: "auto",
+              }}
+            >
+              {issue.body}
+            </Typography>
+          )}
+        </>
       )}
 
       {onAddSubIssue && (
