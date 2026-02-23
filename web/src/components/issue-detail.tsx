@@ -56,6 +56,7 @@ export function IssueDetail({
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editAssignees, setEditAssignees] = useState<string[]>([]);
+  const [editState, setEditState] = useState<"open" | "closed">("open");
   const [editFieldValues, setEditFieldValues] = useState<Record<string, string>>({});
   const [editCollaborators, setEditCollaborators] = useState<
     { login: string; avatarUrl: string }[]
@@ -124,6 +125,7 @@ export function IssueDetail({
     if (!issue) return;
     setEditTitle(issue.title);
     setEditBody(issue.body);
+    setEditState(issue.state);
     setEditAssignees(issue.assignees.map((a) => a.login));
     setEditFieldValues(issue.fieldValues);
     setEditError(null);
@@ -153,6 +155,7 @@ export function IssueDetail({
           title: editTitle.trim(),
           body: editBody || undefined,
           assignees: editAssignees.length > 0 ? editAssignees : [],
+          state: editState,
         });
 
         if (issue.itemId && projectId && projectFields) {
@@ -176,6 +179,7 @@ export function IssueDetail({
           ...issue,
           title: editTitle.trim(),
           body: editBody,
+          state: editState,
           assignees: editAssignees.map((login) => ({ login, avatarUrl: "" })),
           fieldValues: editFieldValues,
         });
@@ -193,6 +197,7 @@ export function IssueDetail({
       onUpdate,
       editTitle,
       editBody,
+      editState,
       editAssignees,
       editFieldValues,
       projectId,
@@ -312,6 +317,8 @@ export function IssueDetail({
             onAssigneesChange={setEditAssignees}
             onFieldValuesChange={setEditFieldValues}
             disabled={editSubmitting}
+            state={editState}
+            onStateChange={setEditState}
           />
           <Stack direction="row" gap={1}>
             <Button

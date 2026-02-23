@@ -87,7 +87,7 @@ export function IssueDashboard() {
 
   const mutations = useIssueMutations(filters.projectId);
 
-  const { allIssues, addOptimisticIssue } = useOptimisticIssues(issues);
+  const { allIssues, addOptimisticIssue, updateOptimisticIssue } = useOptimisticIssues(issues);
   const {
     pendingNodePositions,
     reservePosition,
@@ -371,9 +371,13 @@ export function IssueDashboard() {
     setPanelMode(null);
   }, [refetch]);
 
-  const handleIssueUpdate = useCallback(() => {
-    refetch();
-  }, [refetch]);
+  const handleIssueUpdate = useCallback(
+    (updatedIssue: Issue) => {
+      updateOptimisticIssue(updatedIssue);
+      refetch();
+    },
+    [updateOptimisticIssue, refetch],
+  );
 
   const handleFormClose = useCallback(() => {
     setPanelMode(null);

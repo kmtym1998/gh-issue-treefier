@@ -48,6 +48,7 @@ export interface UpdateIssueParams {
   title: string;
   body?: string;
   assignees?: string[];
+  state?: "open" | "closed";
 }
 
 export interface UseIssueCreationResult {
@@ -101,6 +102,7 @@ export const useIssueCreation = (): UseIssueCreationResult => {
             title: params.title,
             body: params.body,
             assignees: params.assignees,
+            state: params.state,
           },
         );
       } catch (err) {

@@ -20,6 +20,9 @@ export interface IssueFormFieldsProps {
   onAssigneesChange: (v: string[]) => void;
   onFieldValuesChange: (v: Record<string, string>) => void;
   disabled?: boolean;
+  /** 指定した場合のみ state の Select を表示する */
+  state?: "open" | "closed";
+  onStateChange?: (v: "open" | "closed") => void;
 }
 
 export function IssueFormFields({
@@ -34,6 +37,8 @@ export function IssueFormFields({
   onAssigneesChange,
   onFieldValuesChange,
   disabled,
+  state,
+  onStateChange,
 }: IssueFormFieldsProps) {
   const selectableFields = projectFields.filter(
     (f) => f.dataType === "SINGLE_SELECT" || f.dataType === "ITERATION",
@@ -41,6 +46,23 @@ export function IssueFormFields({
 
   return (
     <>
+      {state !== undefined && onStateChange && (
+        <FormControl size="small">
+          <InputLabel>State</InputLabel>
+          <Select
+            label="State"
+            value={state}
+            onChange={(e) =>
+              onStateChange(e.target.value as "open" | "closed")
+            }
+            disabled={disabled}
+          >
+            <MenuItem value="open">Open</MenuItem>
+            <MenuItem value="closed">Closed</MenuItem>
+          </Select>
+        </FormControl>
+      )}
+
       <TextField
         size="small"
         label="タイトル"
