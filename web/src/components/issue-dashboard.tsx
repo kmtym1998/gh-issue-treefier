@@ -310,11 +310,6 @@ export function IssueDashboard() {
     [addDependency, mutations, removeDependency, reportMutationError],
   );
 
-  const handleNodeClick = useCallback((issueId: string | null) => {
-    setSelectedIssueId(issueId);
-    setPanelMode(null);
-  }, []);
-
   const handleCreateIssue = useCallback(
     (flowPos: { x: number; y: number }) => {
       createIssueBasePositionRef.current = flowPos;
@@ -391,16 +386,30 @@ export function IssueDashboard() {
     [allIssues, selectedIssueId],
   );
 
-  const handleIssueDelete = useCallback(async () => {
-    if (!selectedIssue) return;
-    await mutations.deleteIssue(
-      selectedIssue.owner,
-      selectedIssue.repo,
-      selectedIssue.number,
-    );
-    setSelectedIssueId(null);
-    refetch();
-  }, [selectedIssue, mutations, refetch]);
+  const handleEditIssueFromContext = useCallback((issue: Issue) => {
+    setSelectedIssueId(issue.id);
+    setPanelMode(null);
+  }, []);
+
+  const handleDeleteIssueFromContext = useCallback(
+    async (issue: Issue) => {
+      if (
+        !window.confirm(
+          `Issue #${issue.number} "${issue.title}" を削除しますか？この操作は取り消せません。`,
+        )
+      )
+        return;
+      try {
+        await mutations.deleteIssue(issue.owner, issue.repo, issue.number);
+        if (selectedIssueId === issue.id) setSelectedIssueId(null);
+        refetch();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setMutationError(`Issue の削除に失敗しました: ${message}`);
+      }
+    },
+    [mutations, refetch, selectedIssueId],
+  );
 
   const hasQuery = filters.owner !== "" && filters.projectId !== "";
 
@@ -458,12 +467,13 @@ export function IssueDashboard() {
                 projectId={filters.projectId}
                 projectFields={projectFields}
                 pendingNodePositions={pendingNodePositions}
-                onNodeClick={handleNodeClick}
                 onEdgeDelete={handleEdgeDelete}
                 onEdgeAdd={handleEdgeAdd}
                 onCreateIssue={handleCreateIssue}
                 onAddIssue={handleAddIssue}
                 onAddPR={handleAddPR}
+                onEditIssue={handleEditIssueFromContext}
+                onDeleteIssue={handleDeleteIssueFromContext}
               />
             </>
           )}
@@ -519,7 +529,6 @@ export function IssueDashboard() {
             onAddSubIssue={handleAddSubIssue}
             onAddBlockedBy={handleAddBlockedBy}
             onUpdate={handleIssueUpdate}
-            onDelete={handleIssueDelete}
             projectId={filters.projectId}
             projectFields={projectFields}
           />

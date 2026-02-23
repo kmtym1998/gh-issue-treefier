@@ -74,17 +74,15 @@ export const Open: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    expect(canvas.getByText("owner/repo")).toBeDefined();
-    expect(canvas.getByText("#42")).toBeDefined();
-    expect(canvas.getByText(/Implement user authentication/)).toBeDefined();
+    expect(canvas.getByText("owner/repo #42")).toBeDefined();
     expect(canvas.getByText("open")).toBeDefined();
-    expect(canvas.getByText("feature")).toBeDefined();
-    expect(canvas.getByText("priority:high")).toBeDefined();
-    expect(canvas.getByText("alice")).toBeDefined();
-    expect(canvas.getByText("bob")).toBeDefined();
-    expect(canvas.getByText(/OAuth2 support/)).toBeDefined();
 
-    const link = canvas.getByText("View on GitHub");
+    const titleInput = canvas.getByRole("textbox", { name: "タイトル" });
+    expect((titleInput as HTMLInputElement).value).toBe(
+      "Implement user authentication",
+    );
+
+    const link = canvas.getByText("GitHub で表示");
     expect(link.closest("a")).toHaveAttribute(
       "href",
       "https://github.com/owner/repo/issues/42",
@@ -114,8 +112,7 @@ export const Closed: Story = {
     const canvas = within(canvasElement);
 
     expect(canvas.getByText("closed")).toBeDefined();
-    expect(canvas.getByText("#7")).toBeDefined();
-    expect(canvas.getByText("carol")).toBeDefined();
+    expect(canvas.getByText("owner/repo #7")).toBeDefined();
   },
 };
 
@@ -138,8 +135,7 @@ export const NoLabels: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    expect(canvas.getByText("#100")).toBeDefined();
-    expect(canvas.queryByText("feature")).toBeNull();
+    expect(canvas.getByText("owner/repo #100")).toBeDefined();
   },
 };
 
@@ -150,7 +146,7 @@ export const NullIssue: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    expect(canvas.queryByText("View on GitHub")).toBeNull();
+    expect(canvas.queryByText("GitHub で表示")).toBeNull();
   },
 };
 
@@ -237,7 +233,6 @@ export const CrossRepo: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    expect(canvas.getByText("org/backend")).toBeDefined();
-    expect(canvas.getByText("#15")).toBeDefined();
+    expect(canvas.getByText("org/backend #15")).toBeDefined();
   },
 };

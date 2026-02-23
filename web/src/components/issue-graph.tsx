@@ -402,6 +402,8 @@ export interface IssueGraphProps {
   onCreateIssue?: (flowPosition: { x: number; y: number }) => void;
   onAddIssue?: (flowPosition: { x: number; y: number }) => void;
   onAddPR?: (flowPosition: { x: number; y: number }) => void;
+  onEditIssue?: (issue: Issue) => void;
+  onDeleteIssue?: (issue: Issue) => void;
 }
 
 export function IssueGraph(props: IssueGraphProps) {
@@ -420,6 +422,8 @@ function IssueGraphInner({
   onCreateIssue,
   onAddIssue,
   onAddPR,
+  onEditIssue,
+  onDeleteIssue,
 }: IssueGraphProps) {
   const [layoutedNodes, setLayoutedNodes] = useState<Node[] | null>(null);
 
@@ -493,6 +497,8 @@ function IssueGraphInner({
         onCreateIssue={onCreateIssue}
         onAddIssue={onAddIssue}
         onAddPR={onAddPR}
+        onEditIssue={onEditIssue}
+        onDeleteIssue={onDeleteIssue}
       />
     </ReactFlowProvider>
   );
@@ -511,6 +517,8 @@ function IssueGraphReady({
   onCreateIssue,
   onAddIssue,
   onAddPR,
+  onEditIssue,
+  onDeleteIssue,
 }: {
   projectId: string;
   initialNodes: Node[];
@@ -524,6 +532,8 @@ function IssueGraphReady({
   onCreateIssue?: (flowPosition: { x: number; y: number }) => void;
   onAddIssue?: (flowPosition: { x: number; y: number }) => void;
   onAddPR?: (flowPosition: { x: number; y: number }) => void;
+  onEditIssue?: (issue: Issue) => void;
+  onDeleteIssue?: (issue: Issue) => void;
 }) {
   const selectableFields = projectFields.filter(
     (f) => f.dataType === "SINGLE_SELECT" || f.dataType === "ITERATION",
@@ -681,6 +691,7 @@ function IssueGraphReady({
   // --- コンテキストメニュー ---
   const [contextMenu, setContextMenu] = useState<{
     nodeId: string;
+    issue: Issue;
     x: number;
     y: number;
   } | null>(null);
@@ -688,9 +699,16 @@ function IssueGraphReady({
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
-      setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
+      const issue = issues.find((i) => i.id === node.id);
+      if (!issue) return;
+      setContextMenu({
+        nodeId: node.id,
+        issue,
+        x: event.clientX,
+        y: event.clientY,
+      });
     },
-    [],
+    [issues],
   );
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
@@ -819,7 +837,7 @@ function IssueGraphReady({
           <div style={{ marginLeft: 8 }}>
             <Button
               size="small"
-              variant="contained"
+              variant="text"
               onClick={(e) => setFieldsMenuAnchorEl(e.currentTarget)}
               sx={{ fontSize: 12, py: "3px" }}
             >
@@ -911,6 +929,50 @@ function IssueGraphReady({
         }
         slotProps={{ list: { dense: true, sx: { fontSize: 12 } } }}
       >
+        <MenuItem
+          sx={{ fontSize: 12 }}
+          onClick={() => {
+            if (contextMenu) window.open(contextMenu.issue.url, "_blank");
+            closeContextMenu();
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            GitHub で表示
+            <svg
+              viewBox="0 0 24 24"
+              width="12"
+              height="12"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z" />
+            </svg>
+          </span>
+        </MenuItem>
+        {(onEditIssue || onDeleteIssue) && <Divider />}
+        {onEditIssue && (
+          <MenuItem
+            sx={{ fontSize: 12 }}
+            onClick={() => {
+              if (contextMenu) onEditIssue(contextMenu.issue);
+              closeContextMenu();
+            }}
+          >
+            イシューを編集
+          </MenuItem>
+        )}
+        {onDeleteIssue && (
+          <MenuItem
+            sx={{ fontSize: 12, color: "error.main" }}
+            onClick={() => {
+              if (contextMenu) onDeleteIssue(contextMenu.issue);
+              closeContextMenu();
+            }}
+          >
+            イシューを削除
+          </MenuItem>
+        )}
+        <Divider />
         <MenuItem sx={{ fontSize: 12 }} onClick={handleSelectDescendants}>
           Select Descendants
         </MenuItem>

@@ -1,6 +1,5 @@
 import {
   Alert,
-  Avatar,
   Box,
   Button,
   Chip,
@@ -10,7 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useIssueCreation } from "../hooks/use-issue-creation";
 import { useProjectMutations } from "../hooks/use-project-mutations";
 import { useResizablePanel } from "../hooks/use-resizable-panel";
@@ -35,7 +34,6 @@ export interface IssueDetailProps {
     blockerNumber: number,
   ) => Promise<void>;
   onUpdate?: (issue: Issue) => void;
-  onDelete?: () => Promise<void>;
   projectId?: string;
   projectFields?: ProjectField[];
 }
@@ -46,17 +44,11 @@ export function IssueDetail({
   onAddSubIssue,
   onAddBlockedBy,
   onUpdate,
-  onDelete,
   projectId,
   projectFields,
 }: IssueDetailProps) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-
-  const [editing, setEditing] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editAssignees, setEditAssignees] = useState<string[]>([]);
@@ -72,6 +64,21 @@ export function IssueDetail({
 
   const { updateIssue, fetchCollaborators } = useIssueCreation();
   const { updateFieldValue } = useProjectMutations();
+
+  useEffect(() => {
+    if (!issue) return;
+    setEditTitle(issue.title);
+    setEditBody(issue.body);
+    setEditState(issue.state);
+    setEditAssignees(issue.assignees.map((a) => a.login));
+    setEditFieldValues(issue.fieldValues);
+    setEditError(null);
+  }, [issue]);
+
+  useEffect(() => {
+    if (!issue) return;
+    fetchCollaborators(issue.owner, issue.repo).then(setEditCollaborators);
+  }, [issue, fetchCollaborators]);
 
   const handleAddSubIssue = useCallback(
     async (result: SearchResult) => {
@@ -123,40 +130,6 @@ export function IssueDetail({
     [issue, onAddBlockedBy],
   );
 
-  const handleEditStart = useCallback(async () => {
-    if (!issue) return;
-    setEditTitle(issue.title);
-    setEditBody(issue.body);
-    setEditState(issue.state);
-    setEditAssignees(issue.assignees.map((a) => a.login));
-    setEditFieldValues(issue.fieldValues);
-    setEditError(null);
-    setEditing(true);
-    const collaborators = await fetchCollaborators(issue.owner, issue.repo);
-    setEditCollaborators(collaborators);
-  }, [issue, fetchCollaborators]);
-
-  const handleEditCancel = useCallback(() => {
-    setEditing(false);
-    setEditError(null);
-  }, []);
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!onDelete) return;
-    setDeleting(true);
-    setDeleteError(null);
-    try {
-      await onDelete();
-    } catch (err) {
-      setDeleteError(
-        err instanceof Error ? err.message : "Issue の削除に失敗しました",
-      );
-    } finally {
-      setConfirmingDelete(false);
-      setDeleting(false);
-    }
-  }, [onDelete]);
-
   const handleEditSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -201,7 +174,7 @@ export function IssueDetail({
           assignees: editAssignees.map((login) => ({ login, avatarUrl: "" })),
           fieldValues: editFieldValues,
         });
-        setEditing(false);
+        onClose();
       } catch (err) {
         setEditError(
           err instanceof Error ? err.message : "Issue の更新に失敗しました",
@@ -213,6 +186,7 @@ export function IssueDetail({
     [
       issue,
       onUpdate,
+      onClose,
       editTitle,
       editBody,
       editState,
@@ -277,83 +251,17 @@ export function IssueDetail({
             fontWeight: 600,
           })}
         />
-        <Stack direction="row" alignItems="center" gap={0.5}>
-          {onUpdate && !editing && !confirmingDelete && (
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={handleEditStart}
-              sx={{ py: 0.25, px: 1 }}
-            >
-              編集
-            </Button>
-          )}
-          {onDelete && !editing && !confirmingDelete && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              onClick={() => setConfirmingDelete(true)}
-              sx={{ py: 0.25, px: 1 }}
-            >
-              削除
-            </Button>
-          )}
-          <IconButton
-            size="small"
-            onClick={onClose}
-            sx={{ color: "text.secondary" }}
-          >
-            ×
-          </IconButton>
-        </Stack>
+        <IconButton
+          size="small"
+          onClick={onClose}
+          sx={{ color: "text.secondary" }}
+        >
+          ×
+        </IconButton>
       </Stack>
 
-      {confirmingDelete && (
-        <Stack
-          direction="row"
-          alignItems="center"
-          gap={1}
-          sx={{
-            p: 1,
-            borderRadius: 1,
-            bgcolor: "warning.light",
-            border: "1px solid",
-            borderColor: "warning.main",
-          }}
-        >
-          <Typography variant="body2" sx={{ color: "warning.dark", flex: 1 }}>
-            本当に削除しますか？この操作は取り消せません。
-          </Typography>
-          <Button
-            size="small"
-            variant="contained"
-            color="error"
-            onClick={handleDeleteConfirm}
-            disabled={deleting}
-            sx={{ flexShrink: 0 }}
-          >
-            {deleting ? "削除中..." : "削除"}
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => {
-              setConfirmingDelete(false);
-              setDeleteError(null);
-            }}
-            disabled={deleting}
-            sx={{ flexShrink: 0 }}
-          >
-            キャンセル
-          </Button>
-        </Stack>
-      )}
-
-      {deleteError && <Alert severity="error">{deleteError}</Alert>}
-
       <Chip
-        label={`${issue.owner}/${issue.repo}`}
+        label={`${issue.owner}/${issue.repo} #${issue.number}`}
         variant="outlined"
         size="small"
         sx={{
@@ -365,125 +273,46 @@ export function IssueDetail({
         }}
       />
 
-      {editing ? (
-        <Box
-          component="form"
-          onSubmit={handleEditSubmit}
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 1.5,
-          }}
-        >
-          {editError && <Alert severity="error">{editError}</Alert>}
-          <IssueFormFields
-            collaborators={editCollaborators}
-            projectFields={projectFields ?? []}
-            title={editTitle}
-            body={editBody}
-            assignees={editAssignees}
-            fieldValues={editFieldValues}
-            onTitleChange={setEditTitle}
-            onBodyChange={setEditBody}
-            onAssigneesChange={setEditAssignees}
-            onFieldValuesChange={setEditFieldValues}
+      <Box
+        component="form"
+        onSubmit={handleEditSubmit}
+        sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+      >
+        {editError && <Alert severity="error">{editError}</Alert>}
+        <IssueFormFields
+          collaborators={editCollaborators}
+          projectFields={projectFields ?? []}
+          title={editTitle}
+          body={editBody}
+          assignees={editAssignees}
+          fieldValues={editFieldValues}
+          onTitleChange={setEditTitle}
+          onBodyChange={setEditBody}
+          onAssigneesChange={setEditAssignees}
+          onFieldValuesChange={setEditFieldValues}
+          disabled={editSubmitting}
+          state={editState}
+          onStateChange={setEditState}
+        />
+        <Stack direction="row-reverse" gap={1}>
+          <Button
+            type="submit"
+            variant="contained"
+            color="success"
+            disabled={editSubmitting || !editTitle.trim()}
+          >
+            {editSubmitting ? "保存中..." : "保存"}
+          </Button>
+          <Button
+            type="button"
+            variant="text"
+            onClick={onClose}
             disabled={editSubmitting}
-            state={editState}
-            onStateChange={setEditState}
-          />
-          <Stack direction="row-reverse" gap={1}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="success"
-              disabled={editSubmitting || !editTitle.trim()}
-            >
-              {editSubmitting ? "保存中..." : "保存"}
-            </Button>
-            <Button
-              type="button"
-              variant="text"
-              onClick={handleEditCancel}
-              disabled={editSubmitting}
-            >
-              キャンセル
-            </Button>
-          </Stack>
-        </Box>
-      ) : (
-        <>
-          <Typography variant="subtitle1" sx={{ color: "text.primary" }}>
-            <Typography
-              component="span"
-              sx={{
-                color: "text.secondary",
-                fontWeight: 400,
-                fontSize: "inherit",
-              }}
-            >
-              #{issue.number}
-            </Typography>{" "}
-            {issue.title}
-          </Typography>
-
-          {issue.assignees.length > 0 && (
-            <Stack direction="row" flexWrap="wrap" gap={0.75}>
-              {issue.assignees.map((a) => (
-                <Stack
-                  key={a.login}
-                  direction="row"
-                  alignItems="center"
-                  gap={0.5}
-                >
-                  <Avatar
-                    src={a.avatarUrl}
-                    alt={a.login}
-                    sx={{ width: 20, height: 20 }}
-                  />
-                  <Typography variant="body2" sx={{ color: "text.primary" }}>
-                    {a.login}
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
-          )}
-
-          {issue.labels.length > 0 && (
-            <Stack direction="row" flexWrap="wrap" gap={0.5}>
-              {issue.labels.map((label) => (
-                <Chip
-                  key={label.name}
-                  label={label.name}
-                  size="small"
-                  sx={{
-                    bgcolor: `#${label.color}`,
-                    color: isLightColor(label.color) ? "text.primary" : "#fff",
-                    fontWeight: 500,
-                    height: "auto",
-                    "& .MuiChip-label": { px: 1, py: 0.25 },
-                  }}
-                />
-              ))}
-            </Stack>
-          )}
-
-          {issue.body && (
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-                lineHeight: 1.5,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                maxHeight: 200,
-                overflowY: "auto",
-              }}
-            >
-              {issue.body}
-            </Typography>
-          )}
-        </>
-      )}
+          >
+            キャンセル
+          </Button>
+        </Stack>
+      </Box>
 
       {onAddSubIssue && (
         <Box
@@ -566,11 +395,4 @@ export function IssueDetail({
       </Link>
     </Box>
   );
-}
-
-function isLightColor(hex: string): boolean {
-  const r = Number.parseInt(hex.slice(0, 2), 16);
-  const g = Number.parseInt(hex.slice(2, 4), 16);
-  const b = Number.parseInt(hex.slice(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
 }
