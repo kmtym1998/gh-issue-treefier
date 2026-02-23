@@ -8,19 +8,19 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-function jsonResponse(body: unknown, status = 200, statusText = "OK") {
+const jsonResponse = (body: unknown, status = 200, statusText = "OK") => {
   return new Response(JSON.stringify(body), {
     status,
     statusText,
     headers: { "Content-Type": "application/json" },
   });
-}
+};
 
-async function catchAPIError(p: Promise<unknown>): Promise<APIError> {
+const catchAPIError = async (p: Promise<unknown>): Promise<APIError> => {
   const err = await p.catch((e: unknown) => e);
   expect(err).toBeInstanceOf(APIError);
   return err as APIError;
-}
+};
 
 describe("restGet", () => {
   it("sends GET request and returns JSON", async () => {

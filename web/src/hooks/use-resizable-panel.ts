@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 
-export function useResizablePanel(
+export const useResizablePanel = (
   storageKey: string,
   initialWidth: number,
   minWidth = 200,
-) {
+) => {
   const [width, setWidth] = useState(() => {
     const stored = localStorage.getItem(storageKey);
     if (stored !== null) {
@@ -41,4 +41,4 @@ export function useResizablePanel(
   );
 
   return { width, handleMouseDown };
-}
+};

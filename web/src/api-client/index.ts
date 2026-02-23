@@ -12,7 +12,7 @@ export class APIError extends Error {
   }
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
   const response = await fetch(url, options);
 
   if (!response.ok) {
@@ -35,85 +35,88 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   } catch {
     return text as T;
   }
-}
+};
 
-export function restGet<T = unknown>(path: string): Promise<T> {
+export const restGet = <T = unknown>(path: string): Promise<T> => {
   return request<T>(`/api/github/rest/${path}`);
-}
+};
 
-export function restPost<T = unknown>(path: string, body: unknown): Promise<T> {
+export const restPost = <T = unknown>(
+  path: string,
+  body: unknown,
+): Promise<T> => {
   return request<T>(`/api/github/rest/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-}
+};
 
-export function restPatch<T = unknown>(
+export const restPatch = <T = unknown>(
   path: string,
   body: unknown,
-): Promise<T> {
+): Promise<T> => {
   return request<T>(`/api/github/rest/${path}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-}
+};
 
-export function restDelete<T = unknown>(path: string): Promise<T> {
+export const restDelete = <T = unknown>(path: string): Promise<T> => {
   return request<T>(`/api/github/rest/${path}`, {
     method: "DELETE",
   });
-}
+};
 
-export function graphql<T = unknown>(
+export const graphql = <T = unknown>(
   query: string,
   variables?: Record<string, unknown>,
-): Promise<T> {
+): Promise<T> => {
   return request<T>("/api/github/graphql", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
   });
-}
+};
 
 export interface CacheData {
   items: unknown[] | null;
   nodePositions: Record<string, { x: number; y: number }>;
 }
 
-export function cacheFlush(): Promise<void> {
+export const cacheFlush = (): Promise<void> => {
   return request<void>("/api/cache/flush", { method: "POST" });
-}
+};
 
-export function cacheGet(projectId: string): Promise<CacheData> {
+export const cacheGet = (projectId: string): Promise<CacheData> => {
   return request<CacheData>(`/api/cache/${projectId}`);
-}
+};
 
-export function cachePutItems(
+export const cachePutItems = (
   projectId: string,
   items: unknown[],
-): Promise<void> {
+): Promise<void> => {
   return request<void>(`/api/cache/${projectId}/items`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(items),
   });
-}
+};
 
-export function cacheDeleteItems(projectId: string): Promise<void> {
+export const cacheDeleteItems = (projectId: string): Promise<void> => {
   return request<void>(`/api/cache/${projectId}/items`, {
     method: "DELETE",
   });
-}
+};
 
-export function cachePutNodePositions(
+export const cachePutNodePositions = (
   projectId: string,
   positions: Record<string, { x: number; y: number }>,
-): Promise<void> {
+): Promise<void> => {
   return request<void>(`/api/cache/${projectId}/node-positions`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(positions),
   });
-}
+};

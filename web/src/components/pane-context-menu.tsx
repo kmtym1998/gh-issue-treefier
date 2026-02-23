@@ -9,14 +9,14 @@ export interface PaneContextMenuProps {
   onAddPR: () => void;
 }
 
-export function PaneContextMenu({
+export const PaneContextMenu = ({
   anchorPosition,
   open,
   onClose,
   onCreateIssue,
   onAddIssue,
   onAddPR,
-}: PaneContextMenuProps) {
+}: PaneContextMenuProps) => {
   const handle = (cb: () => void) => () => {
     cb();
     onClose();
@@ -56,4 +56,4 @@ export function PaneContextMenu({
       </MenuItem>
     </Menu>
   );
-}
+};

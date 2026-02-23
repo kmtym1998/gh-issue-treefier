@@ -95,14 +95,14 @@ export const usePendingNodePositions = (
 };
 
 /** 指定 ID 群に位置を設定し、IndexedDB キャッシュにも保存する */
-function applyPositions(
+const applyPositions = (
   issueIds: string[],
   pos: { x: number; y: number },
   projectId: string,
   setPendingNodePositions: React.Dispatch<
     React.SetStateAction<Record<string, { x: number; y: number }>>
   >,
-) {
+) => {
   setPendingNodePositions((prev) => {
     const next = { ...prev };
     for (const id of issueIds) {
@@ -117,4 +117,4 @@ function applyPositions(
     }
     setNodePositions(projectId, positions);
   });
-}
+};

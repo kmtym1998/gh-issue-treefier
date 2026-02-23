@@ -33,13 +33,13 @@ export interface IssueCreateFormProps {
   onClose: () => void;
 }
 
-export function IssueCreateForm({
+export const IssueCreateForm = ({
   repos,
   projectId,
   projectFields,
   onSuccess,
   onClose,
-}: IssueCreateFormProps) {
+}: IssueCreateFormProps) => {
   const { width, handleMouseDown } = useResizablePanel(
     "panel-width:issue-create-form",
     400,
@@ -330,4 +330,4 @@ export function IssueCreateForm({
       </Button>
     </Box>
   );
-}
+};

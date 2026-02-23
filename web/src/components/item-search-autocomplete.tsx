@@ -18,14 +18,14 @@ export interface ItemSearchAutocompleteProps {
   label?: string;
 }
 
-export function ItemSearchAutocomplete({
+export const ItemSearchAutocomplete = ({
   owner,
   type = "issue",
   onSelect,
   disabled,
   placeholder,
   label = "検索",
-}: ItemSearchAutocompleteProps) {
+}: ItemSearchAutocompleteProps) => {
   const [inputValue, setInputValue] = useState("");
   const [value, setValue] = useState<SearchResult | null>(null);
   const { results, search, loading } = useItemSearch();
@@ -105,4 +105,4 @@ export function ItemSearchAutocomplete({
       noOptionsText="結果なし"
     />
   );
-}
+};

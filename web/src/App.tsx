@@ -1,7 +1,7 @@
 import { IssueDashboard } from "./components/issue-dashboard";
 
-function App() {
+const App = () => {
   return <IssueDashboard />;
-}
+};
 
 export default App;

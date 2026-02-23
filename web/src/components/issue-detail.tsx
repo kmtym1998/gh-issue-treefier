@@ -38,7 +38,7 @@ export interface IssueDetailProps {
   projectFields?: ProjectField[];
 }
 
-export function IssueDetail({
+export const IssueDetail = ({
   issue,
   onClose,
   onAddSubIssue,
@@ -46,7 +46,7 @@ export function IssueDetail({
   onUpdate,
   projectId,
   projectFields,
-}: IssueDetailProps) {
+}: IssueDetailProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -395,4 +395,4 @@ export function IssueDetail({
       </Link>
     </Box>
   );
-}
+};

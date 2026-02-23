@@ -37,22 +37,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockFetchOk(body: unknown, status = 200) {
+const mockFetchOk = (body: unknown, status = 200) => {
   fetchMock.mockResolvedValueOnce(
     new Response(JSON.stringify(body), {
       status,
       headers: { "Content-Type": "application/json" },
     }),
   );
-}
+};
 
-function mockFetchNoContent() {
+const mockFetchNoContent = () => {
   fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
-}
+};
 
-function mockFetchError() {
+const mockFetchError = () => {
   fetchMock.mockRejectedValueOnce(new Error("network error"));
-}
+};
 
 describe("cache (server-backed)", () => {
   it("returns null when items is null", async () => {

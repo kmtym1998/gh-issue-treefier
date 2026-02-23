@@ -18,9 +18,9 @@ export interface SavedNodePositions {
   positions: Record<string, { x: number; y: number }>;
 }
 
-export async function getCachedItems(
+export const getCachedItems = async (
   projectId: string,
-): Promise<CacheEntry | null> {
+): Promise<CacheEntry | null> => {
   try {
     const data: CacheData = await cacheGet(projectId);
     if (!data.items) return null;
@@ -32,30 +32,30 @@ export async function getCachedItems(
   } catch {
     return null;
   }
-}
+};
 
-export async function setCachedItems(
+export const setCachedItems = async (
   projectId: string,
   items: GitHubProjectV2Item[],
-): Promise<void> {
+): Promise<void> => {
   try {
     await cachePutItems(projectId, items);
   } catch {
     // no-op
   }
-}
+};
 
-export async function invalidateCache(projectId: string): Promise<void> {
+export const invalidateCache = async (projectId: string): Promise<void> => {
   try {
     await cacheDeleteItems(projectId);
   } catch {
     // no-op
   }
-}
+};
 
-export async function getNodePositions(
+export const getNodePositions = async (
   projectId: string,
-): Promise<SavedNodePositions | null> {
+): Promise<SavedNodePositions | null> => {
   try {
     const data: CacheData = await cacheGet(projectId);
     if (!data.nodePositions || Object.keys(data.nodePositions).length === 0) {
@@ -65,15 +65,15 @@ export async function getNodePositions(
   } catch {
     return null;
   }
-}
+};
 
-export async function setNodePositions(
+export const setNodePositions = async (
   projectId: string,
   positions: Record<string, { x: number; y: number }>,
-): Promise<void> {
+): Promise<void> => {
   try {
     await cachePutNodePositions(projectId, positions);
   } catch {
     // no-op
   }
-}
+};

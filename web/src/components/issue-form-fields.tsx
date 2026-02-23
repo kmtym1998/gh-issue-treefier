@@ -28,7 +28,7 @@ export interface IssueFormFieldsProps {
   onStateChange?: (v: "open" | "closed") => void;
 }
 
-export function IssueFormFields({
+export const IssueFormFields = ({
   collaborators,
   projectFields,
   title,
@@ -42,7 +42,7 @@ export function IssueFormFields({
   disabled,
   state,
   onStateChange,
-}: IssueFormFieldsProps) {
+}: IssueFormFieldsProps) => {
   const selectableFields = projectFields.filter(
     (f) => f.dataType === "SINGLE_SELECT" || f.dataType === "ITERATION",
   );
@@ -147,4 +147,4 @@ export function IssueFormFields({
       ))}
     </>
   );
-}
+};

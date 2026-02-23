@@ -22,7 +22,7 @@ const defaultFilters: FilterValues = {
   fieldFilters: {},
 };
 
-export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
+export const FilterPanel = ({ defaultValues, onChange }: FilterPanelProps) => {
   const [filters, setFilters] = useState<FilterValues>({
     ...defaultFilters,
     ...defaultValues,
@@ -131,9 +131,9 @@ export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
       </Stack>
     </Box>
   );
-}
+};
 
-function ProjectSelect({
+const ProjectSelect = ({
   projects,
   loading,
   value,
@@ -145,7 +145,7 @@ function ProjectSelect({
   value: string;
   disabled: boolean;
   onChange: (projectId: string) => void;
-}) {
+}) => {
   return (
     <TextField
       select
@@ -164,9 +164,9 @@ function ProjectSelect({
       ))}
     </TextField>
   );
-}
+};
 
-function FieldFilter({
+const FieldFilter = ({
   field,
   value,
   onChange,
@@ -174,7 +174,7 @@ function FieldFilter({
   field: ProjectField;
   value: string;
   onChange: (fieldId: string, value: string) => void;
-}) {
+}) => {
   if (field.options.length === 0) return null;
 
   return (
@@ -193,4 +193,4 @@ function FieldFilter({
       ))}
     </TextField>
   );
-}
+};

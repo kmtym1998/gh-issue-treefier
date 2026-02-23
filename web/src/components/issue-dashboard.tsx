@@ -14,7 +14,7 @@ import { IssueDetail } from "./issue-detail";
 import { IssueGraph } from "./issue-graph";
 import { ItemSearchForm } from "./item-search-form";
 
-export function IssueDashboard() {
+export const IssueDashboard = () => {
   const { initialFilters, syncToUrl } = useFilterQueryParams();
 
   const [filters, setFilters] = useState<FilterValues>({
@@ -536,4 +536,4 @@ export function IssueDashboard() {
       </Box>
     </Box>
   );
-}
+};

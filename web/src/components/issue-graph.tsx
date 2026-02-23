@@ -64,7 +64,7 @@ interface IssueNodeData {
   resolvedFields: ResolvedField[];
 }
 
-function IssueNode({ data, selected }: NodeProps) {
+const IssueNode = ({ data, selected }: NodeProps) => {
   const { issue, isMultiRepo, resolvedFields } =
     data as unknown as IssueNodeData;
   const isPR = issue.url.includes("/pull/");
@@ -213,7 +213,7 @@ function IssueNode({ data, selected }: NodeProps) {
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
-}
+};
 
 const nodeTypes = { issue: IssueNode };
 
@@ -225,11 +225,11 @@ export const NODE_HEIGHT = 88;
  * position は仮の値（0, 0）で、layoutNodes で更新される。
  * projectFields・visibleFieldIds を渡すとフィールド値をノードデータに含める。
  */
-export function issuesToNodes(
+export const issuesToNodes = (
   issues: Issue[],
   projectFields: ProjectField[] = [],
   visibleFieldIds: string[] = [],
-): Node[] {
+): Node[] => {
   const repos = new Set(issues.map((i) => `${i.owner}/${i.repo}`));
   const isMultiRepo = repos.size > 1;
 
@@ -253,13 +253,13 @@ export function issuesToNodes(
       position: { x: 0, y: 0 },
     };
   });
-}
+};
 
 /**
  * Dependency 配列を ReactFlow の Edge 配列に変換する。
  * エッジの種類に応じてスタイルを分岐する。
  */
-export function dependenciesToEdges(dependencies: Dependency[]): Edge[] {
+export const dependenciesToEdges = (dependencies: Dependency[]): Edge[] => {
   return dependencies.map((dep) => {
     const base = {
       id: `e:${dep.type}:${dep.source}-${dep.target}`,
@@ -283,13 +283,13 @@ export function dependenciesToEdges(dependencies: Dependency[]): Edge[] {
       markerEnd: { type: MarkerType.ArrowClosed, color: "#656d76" },
     };
   });
-}
+};
 
 /**
  * 指定ノードから outgoing エッジを辿り、子孫ノードの ID を全て返す（再帰）。
  * sub_issue と blocked_by の両方のエッジを辿る。
  */
-export function getDescendantIds(nodeId: string, edges: Edge[]): Set<string> {
+export const getDescendantIds = (nodeId: string, edges: Edge[]): Set<string> => {
   const result = new Set<string>();
   const queue = [nodeId];
   while (queue.length > 0) {
@@ -303,13 +303,13 @@ export function getDescendantIds(nodeId: string, edges: Edge[]): Set<string> {
     }
   }
   return result;
-}
+};
 
 /**
  * 指定ノードから incoming エッジを辿り、祖先ノードの ID を全て返す（再帰）。
  * sub_issue と blocked_by の両方のエッジを辿る。
  */
-export function getAncestorIds(nodeId: string, edges: Edge[]): Set<string> {
+export const getAncestorIds = (nodeId: string, edges: Edge[]): Set<string> => {
   const result = new Set<string>();
   const queue = [nodeId];
   while (queue.length > 0) {
@@ -323,7 +323,7 @@ export function getAncestorIds(nodeId: string, edges: Edge[]): Set<string> {
     }
   }
   return result;
-}
+};
 
 const elk = new ELK();
 
@@ -331,11 +331,11 @@ const elk = new ELK();
  * ELKjs を使って Node 配列にレイアウト座標を付与する。
  * 元の配列は変更せず、新しい配列を返す。
  */
-export async function layoutNodes(
+export const layoutNodes = async (
   nodes: Node[],
   edges: Edge[],
   direction: "TB" | "LR" = "TB",
-): Promise<Node[]> {
+): Promise<Node[]> => {
   if (nodes.length === 0) return [];
 
   const isHorizontal = direction === "LR";
@@ -388,7 +388,7 @@ export async function layoutNodes(
       position: { x: pos.x, y: pos.y },
     };
   });
-}
+};
 
 export interface IssueGraphProps {
   issues: Issue[];
@@ -406,11 +406,11 @@ export interface IssueGraphProps {
   onDeleteIssue?: (issue: Issue) => void;
 }
 
-export function IssueGraph(props: IssueGraphProps) {
+export const IssueGraph = (props: IssueGraphProps) => {
   return <IssueGraphInner {...props} />;
-}
+};
 
-function IssueGraphInner({
+const IssueGraphInner = ({
   issues,
   dependencies,
   projectId,
@@ -424,7 +424,7 @@ function IssueGraphInner({
   onAddPR,
   onEditIssue,
   onDeleteIssue,
-}: IssueGraphProps) {
+}: IssueGraphProps) => {
   const [layoutedNodes, setLayoutedNodes] = useState<Node[] | null>(null);
 
   const initializedProjectIdRef = useRef<string | null>(null);
@@ -502,9 +502,9 @@ function IssueGraphInner({
       />
     </ReactFlowProvider>
   );
-}
+};
 
-function IssueGraphReady({
+const IssueGraphReady = ({
   projectId,
   initialNodes,
   issues,
@@ -534,7 +534,7 @@ function IssueGraphReady({
   onAddPR?: (flowPosition: { x: number; y: number }) => void;
   onEditIssue?: (issue: Issue) => void;
   onDeleteIssue?: (issue: Issue) => void;
-}) {
+}) => {
   const selectableFields = projectFields.filter(
     (f) => f.dataType === "SINGLE_SELECT" || f.dataType === "ITERATION",
   );
@@ -986,7 +986,7 @@ function IssueGraphReady({
       </Menu>
     </div>
   );
-}
+};
 
 const graphStyles: Record<string, React.CSSProperties> = {
   modeBar: {

@@ -5,7 +5,7 @@ interface ViewerResponse {
   data: { viewer: { login: string } };
 }
 
-export function useViewer() {
+export const useViewer = () => {
   const [login, setLogin] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,4 +15,4 @@ export function useViewer() {
   }, []);
 
   return { login };
-}
+};

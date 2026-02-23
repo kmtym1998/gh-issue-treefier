@@ -14,13 +14,13 @@ export interface ItemSearchFormProps {
   onClose: () => void;
 }
 
-export function ItemSearchForm({
+export const ItemSearchForm = ({
   type,
   owner,
   projectId,
   onSuccess,
   onClose,
-}: ItemSearchFormProps) {
+}: ItemSearchFormProps) => {
   const { width, handleMouseDown } = useResizablePanel(
     "panel-width:item-search-form",
     400,
@@ -97,4 +97,4 @@ export function ItemSearchForm({
       />
     </Box>
   );
-}
+};
