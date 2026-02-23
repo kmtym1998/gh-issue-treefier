@@ -379,6 +379,7 @@ export function IssueDashboard() {
     [updateOptimisticIssue, refetch],
   );
 
+
   const handleFormClose = useCallback(() => {
     setPanelMode(null);
     clearReservedPosition();
@@ -388,6 +389,17 @@ export function IssueDashboard() {
     () => allIssues.find((i) => i.id === selectedIssueId) ?? null,
     [allIssues, selectedIssueId],
   );
+
+  const handleIssueDelete = useCallback(async () => {
+    if (!selectedIssue) return;
+    await mutations.deleteIssue(
+      selectedIssue.owner,
+      selectedIssue.repo,
+      selectedIssue.number,
+    );
+    setSelectedIssueId(null);
+    refetch();
+  }, [selectedIssue, mutations, refetch]);
 
   const hasQuery = filters.owner !== "" && filters.projectId !== "";
 
@@ -484,6 +496,7 @@ export function IssueDashboard() {
             onAddSubIssue={handleAddSubIssue}
             onAddBlockedBy={handleAddBlockedBy}
             onUpdate={handleIssueUpdate}
+            onDelete={handleIssueDelete}
             projectId={filters.projectId}
             projectFields={projectFields}
           />

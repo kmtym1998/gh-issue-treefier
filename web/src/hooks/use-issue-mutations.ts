@@ -35,6 +35,14 @@ const fetchIssueNodeId = async (
   return issue.node_id;
 };
 
+const DELETE_ISSUE_MUTATION = `
+  mutation DeleteIssue($issueId: ID!) {
+    deleteIssue(input: { issueId: $issueId }) {
+      repository { id }
+    }
+  }
+`;
+
 const ADD_BLOCKED_BY_MUTATION = `
   mutation($issueId: ID!, $blockingIssueId: ID!) {
     addBlockedBy(input: { issueId: $issueId, blockingIssueId: $blockingIssueId }) {
@@ -96,6 +104,18 @@ const removeSubIssue = async (
 };
 
 /**
+ * Issue を削除する。リポジトリの admin 権限が必要。
+ */
+const deleteIssue = async (
+  owner: string,
+  repo: string,
+  number: number,
+): Promise<void> => {
+  const nodeId = await fetchIssueNodeId(owner, repo, number);
+  await graphql(DELETE_ISSUE_MUTATION, { issueId: nodeId });
+};
+
+/**
  * BlockedBy 関係を追加する。
  * issueNumber がブロックされている側、blockerNumber がブロックしている側。
  */
@@ -136,6 +156,7 @@ const removeBlockedBy = async (
 };
 
 export interface UseIssueMutationsResult {
+  deleteIssue: (owner: string, repo: string, number: number) => Promise<void>;
   addSubIssue: (
     owner: string,
     repo: string,
@@ -195,6 +216,12 @@ export const useIssueMutations = (
     [projectId, onSuccess],
   );
 
+  const del = useCallback(
+    (owner: string, repo: string, number: number) =>
+      wrap(() => deleteIssue(owner, repo, number)),
+    [wrap],
+  );
+
   const add = useCallback(
     (owner: string, repo: string, parentNumber: number, childNumber: number) =>
       wrap(() => addSubIssue(owner, repo, parentNumber, childNumber)),
@@ -220,6 +247,7 @@ export const useIssueMutations = (
   );
 
   return {
+    deleteIssue: del,
     addSubIssue: add,
     removeSubIssue: remove,
     addBlockedBy: addBlocked,

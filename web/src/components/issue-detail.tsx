@@ -34,6 +34,7 @@ export interface IssueDetailProps {
     blockerNumber: number,
   ) => Promise<void>;
   onUpdate?: (issue: Issue) => void;
+  onDelete?: () => Promise<void>;
   projectId?: string;
   projectFields?: ProjectField[];
 }
@@ -44,6 +45,7 @@ export function IssueDetail({
   onAddSubIssue,
   onAddBlockedBy,
   onUpdate,
+  onDelete,
   projectId,
   projectFields,
 }: IssueDetailProps) {
@@ -53,11 +55,16 @@ export function IssueDetail({
   const [formError, setFormError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editAssignees, setEditAssignees] = useState<string[]>([]);
   const [editState, setEditState] = useState<"open" | "closed">("open");
-  const [editFieldValues, setEditFieldValues] = useState<Record<string, string>>({});
+  const [editFieldValues, setEditFieldValues] = useState<
+    Record<string, string>
+  >({});
   const [editCollaborators, setEditCollaborators] = useState<
     { login: string; avatarUrl: string }[]
   >([]);
@@ -138,6 +145,22 @@ export function IssueDetail({
     setEditing(false);
     setEditError(null);
   }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!onDelete) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDelete();
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : "Issue の削除に失敗しました",
+      );
+    } finally {
+      setConfirmingDelete(false);
+      setDeleting(false);
+    }
+  }, [onDelete]);
 
   const handleEditSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -255,7 +278,7 @@ export function IssueDetail({
           }}
         />
         <Stack direction="row" alignItems="center" gap={0.5}>
-          {onUpdate && !editing && (
+          {onUpdate && !editing && !confirmingDelete && (
             <Button
               size="small"
               variant="outlined"
@@ -265,11 +288,68 @@ export function IssueDetail({
               編集
             </Button>
           )}
+          {onDelete && !editing && !confirmingDelete && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={() => setConfirmingDelete(true)}
+              sx={{ fontSize: 12, textTransform: "none", py: 0.25, px: 1 }}
+            >
+              削除
+            </Button>
+          )}
           <IconButton size="small" onClick={onClose} sx={{ color: "#656d76" }}>
             ×
           </IconButton>
         </Stack>
       </Stack>
+
+      {confirmingDelete && (
+        <Stack
+          direction="row"
+          alignItems="center"
+          gap={1}
+          sx={{
+            p: 1,
+            borderRadius: 1,
+            bgcolor: "#fff8f0",
+            border: "1px solid #f97316",
+          }}
+        >
+          <Typography sx={{ fontSize: 12, color: "#9a3412", flex: 1 }}>
+            本当に削除しますか？この操作は取り消せません。
+          </Typography>
+          <Button
+            size="small"
+            variant="contained"
+            color="error"
+            onClick={handleDeleteConfirm}
+            disabled={deleting}
+            sx={{ fontSize: 12, textTransform: "none", flexShrink: 0 }}
+          >
+            {deleting ? "削除中..." : "削除"}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              setConfirmingDelete(false);
+              setDeleteError(null);
+            }}
+            disabled={deleting}
+            sx={{ fontSize: 12, textTransform: "none", flexShrink: 0 }}
+          >
+            キャンセル
+          </Button>
+        </Stack>
+      )}
+
+      {deleteError && (
+        <Alert severity="error" sx={{ py: 0.5, fontSize: 12 }}>
+          {deleteError}
+        </Alert>
+      )}
 
       <Chip
         label={`${issue.owner}/${issue.repo}`}
