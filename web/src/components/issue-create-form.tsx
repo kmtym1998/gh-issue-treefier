@@ -14,11 +14,12 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useIssueCreation } from "../hooks/use-issue-creation";
 import { buildIssueId } from "../hooks/use-project-issues";
 import { useProjectMutations } from "../hooks/use-project-mutations";
 import { useResizablePanel } from "../hooks/use-resizable-panel";
+import { useViewer } from "../hooks/use-viewer";
 import type { Issue, IssueTemplate } from "../types/issue";
 import type { ProjectField } from "../types/project";
 
@@ -55,9 +56,19 @@ export function IssueCreateForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { login: viewerLogin } = useViewer();
+  const viewerDefaultSetRef = useRef(false);
   const { createIssue, fetchTemplates, fetchCollaborators } =
     useIssueCreation();
   const { addToProject, updateFieldValue } = useProjectMutations();
+
+  // viewer が取得できたら一度だけデフォルトで自分をアサイン
+  useEffect(() => {
+    if (viewerLogin && !viewerDefaultSetRef.current) {
+      viewerDefaultSetRef.current = true;
+      setAssignees([viewerLogin]);
+    }
+  }, [viewerLogin]);
 
   const selectableFields = projectFields.filter(
     (f) => f.dataType === "SINGLE_SELECT" || f.dataType === "ITERATION",
@@ -213,6 +224,11 @@ export function IssueCreateForm({
         gap: 1.5,
         fontSize: 13,
         flexShrink: 0,
+        "& .MuiOutlinedInput-root.Mui-disabled": { bgcolor: "#f6f8fa" },
+        "& .MuiInputBase-input.Mui-disabled": {
+          WebkitTextFillColor: "#8c959f",
+        },
+        "& .MuiFormLabel-root.Mui-disabled": { color: "#8c959f" },
       }}
     >
       <Box
@@ -270,7 +286,7 @@ export function IssueCreateForm({
             label="テンプレート"
             value={selectedTemplate}
             onChange={(e) => handleTemplateChange(e.target.value)}
-            disabled={submitting}
+            disabled={submitting || !isRepoValid}
           >
             <MenuItem value="">
               <em>なし</em>
@@ -290,7 +306,7 @@ export function IssueCreateForm({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
-        disabled={submitting}
+        disabled={submitting || !isRepoValid}
       />
 
       <TextField
@@ -300,18 +316,20 @@ export function IssueCreateForm({
         onChange={(e) => setBody(e.target.value)}
         multiline
         minRows={5}
-        disabled={submitting}
+        disabled={submitting || !isRepoValid}
       />
 
       <Autocomplete
         multiple
         freeSolo
+        openOnFocus
         options={collaborators.map((c) => c.login)}
         value={assignees}
         onChange={(_, value) => setAssignees(value)}
         size="small"
         renderInput={(params) => <TextField {...params} label="Assignees" />}
-        disabled={submitting}
+        disabled={submitting || !isRepoValid}
+        noOptionsText="リポジトリを選択してください"
       />
 
       {selectableFields.map((field) => (
@@ -326,7 +344,7 @@ export function IssueCreateForm({
                 [field.id]: e.target.value,
               }))
             }
-            disabled={submitting}
+            disabled={submitting || !isRepoValid}
           >
             <MenuItem value="">
               <em>なし</em>
@@ -346,7 +364,7 @@ export function IssueCreateForm({
             size="small"
             checked={continueCreating}
             onChange={(e) => setContinueCreating(e.target.checked)}
-            disabled={submitting}
+            disabled={submitting || !isRepoValid}
           />
         }
         label={<Typography sx={{ fontSize: 13 }}>続けて作成する</Typography>}

@@ -74,6 +74,25 @@ const mockAddProject = {
   },
 };
 
+const mockViewer = { data: { viewer: { login: "octocat" } } };
+
+const graphqlHandler = (extra?: (query: string) => ReturnType<typeof HttpResponse.json> | null) =>
+  http.post("/api/github/graphql", async ({ request }) => {
+    const body = (await request.json()) as { query: string };
+    if (extra) {
+      const res = extra(body.query);
+      if (res) return res;
+    }
+    if (body.query.includes("viewer")) return HttpResponse.json(mockViewer);
+    if (body.query.includes("addProjectV2ItemById")) return HttpResponse.json(mockAddProject);
+    if (body.query.includes("updateProjectV2ItemFieldValue")) {
+      return HttpResponse.json({
+        data: { updateProjectV2ItemFieldValue: { projectV2Item: { id: "PVTI_new" } } },
+      });
+    }
+    return HttpResponse.json({ data: {} });
+  });
+
 const handlersWithTemplates = [
   http.get("/api/github/rest/repos/:owner/:repo/collaborators", () =>
     HttpResponse.json(mockCollaborators),
@@ -81,22 +100,9 @@ const handlersWithTemplates = [
   http.get("/api/github/rest/repos/:owner/:repo/issues", () =>
     HttpResponse.json([]),
   ),
-  http.post("/api/github/graphql", async ({ request }) => {
-    const body = (await request.json()) as { query: string };
-    if (body.query.includes("issueTemplates")) {
-      return HttpResponse.json(mockTemplates);
-    }
-    if (body.query.includes("addProjectV2ItemById")) {
-      return HttpResponse.json(mockAddProject);
-    }
-    if (body.query.includes("updateProjectV2ItemFieldValue")) {
-      return HttpResponse.json({
-        data: {
-          updateProjectV2ItemFieldValue: { projectV2Item: { id: "PVTI_new" } },
-        },
-      });
-    }
-    return HttpResponse.json({ data: {} });
+  graphqlHandler((query) => {
+    if (query.includes("issueTemplates")) return HttpResponse.json(mockTemplates);
+    return null;
   }),
   http.post("/api/github/rest/repos/:owner/:repo/issues", () =>
     HttpResponse.json(mockCreatedIssue, { status: 201 }),
@@ -107,17 +113,10 @@ const handlersNoTemplates = [
   http.get("/api/github/rest/repos/:owner/:repo/collaborators", () =>
     HttpResponse.json(mockCollaborators),
   ),
-  http.post("/api/github/graphql", async ({ request }) => {
-    const body = (await request.json()) as { query: string };
-    if (body.query.includes("issueTemplates")) {
-      return HttpResponse.json({
-        data: { repository: { issueTemplates: [] } },
-      });
-    }
-    if (body.query.includes("addProjectV2ItemById")) {
-      return HttpResponse.json(mockAddProject);
-    }
-    return HttpResponse.json({ data: {} });
+  graphqlHandler((query) => {
+    if (query.includes("issueTemplates"))
+      return HttpResponse.json({ data: { repository: { issueTemplates: [] } } });
+    return null;
   }),
   http.post("/api/github/rest/repos/:owner/:repo/issues", () =>
     HttpResponse.json(mockCreatedIssue, { status: 201 }),
@@ -128,12 +127,9 @@ const handlersError = [
   http.get("/api/github/rest/repos/:owner/:repo/collaborators", () =>
     HttpResponse.json(mockCollaborators),
   ),
-  http.post("/api/github/graphql", async ({ request }) => {
-    const body = (await request.json()) as { query: string };
-    if (body.query.includes("issueTemplates")) {
-      return HttpResponse.json(mockTemplates);
-    }
-    return HttpResponse.json({ data: {} });
+  graphqlHandler((query) => {
+    if (query.includes("issueTemplates")) return HttpResponse.json(mockTemplates);
+    return null;
   }),
   http.post("/api/github/rest/repos/:owner/:repo/issues", () =>
     HttpResponse.json(
