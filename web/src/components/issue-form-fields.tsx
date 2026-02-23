@@ -1,5 +1,8 @@
 import {
   Autocomplete,
+  Avatar,
+  Box,
+  Chip,
   FormControl,
   InputLabel,
   MenuItem,
@@ -91,6 +94,33 @@ export function IssueFormFields({
         onChange={(_, value) => onAssigneesChange(value)}
         size="small"
         renderInput={(params) => <TextField {...params} label="Assignees" />}
+        renderOption={(props, option) => {
+          const collaborator = collaborators.find((c) => c.login === option);
+          return (
+            <Box component="li" {...props}>
+              <Avatar
+                src={collaborator?.avatarUrl}
+                alt={option}
+                sx={{ width: 24, height: 24, mr: 1 }}
+              />
+              {option}
+            </Box>
+          );
+        }}
+        renderTags={(value, getTagProps) =>
+          value.map((option, index) => {
+            const collaborator = collaborators.find((c) => c.login === option);
+            return (
+              <Chip
+                {...getTagProps({ index })}
+                key={option}
+                label={option}
+                avatar={<Avatar src={collaborator?.avatarUrl} alt={option} />}
+                size="small"
+              />
+            );
+          })
+        }
         disabled={disabled}
         noOptionsText="コラボレーターを取得できませんでした"
       />
