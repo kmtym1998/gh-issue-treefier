@@ -155,5 +155,12 @@ export const useIssueCreation = (): UseIssueCreationResult => {
     [],
   );
 
-  return { createIssue, updateIssue, fetchTemplates, fetchCollaborators, loading, error };
+  return {
+    createIssue,
+    updateIssue,
+    fetchTemplates,
+    fetchCollaborators,
+    loading,
+    error,
+  };
 };

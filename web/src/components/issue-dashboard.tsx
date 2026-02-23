@@ -1,3 +1,4 @@
+import { Box, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cacheFlush } from "../api-client";
 import { useFilterQueryParams } from "../hooks/use-filter-query-params";
@@ -87,7 +88,8 @@ export function IssueDashboard() {
 
   const mutations = useIssueMutations(filters.projectId);
 
-  const { allIssues, addOptimisticIssue, updateOptimisticIssue } = useOptimisticIssues(issues);
+  const { allIssues, addOptimisticIssue, updateOptimisticIssue } =
+    useOptimisticIssues(issues);
   const {
     pendingNodePositions,
     reservePosition,
@@ -379,7 +381,6 @@ export function IssueDashboard() {
     [updateOptimisticIssue, refetch],
   );
 
-
   const handleFormClose = useCallback(() => {
     setPanelMode(null);
     clearReservedPosition();
@@ -404,34 +405,52 @@ export function IssueDashboard() {
   const hasQuery = filters.owner !== "" && filters.projectId !== "";
 
   return (
-    <div style={styles.root}>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <FilterPanel
         defaultValues={initialFilters}
         onChange={handleFilterChange}
       />
 
-      <div style={styles.main}>
-        <div style={styles.graphArea}>
+      <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <Box
+          sx={{
+            flex: 1,
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           {!hasQuery && (
-            <p style={styles.placeholder}>
-              Owner を入力し Project を選択して Issue を表示
-            </p>
+            <Typography color="text.secondary">
+              オーナーを入力し Project を選択して Issue を表示
+            </Typography>
           )}
 
-          {hasQuery && loading && <p style={styles.placeholder}>Loading...</p>}
+          {hasQuery && loading && (
+            <Typography color="text.secondary">読み込み中...</Typography>
+          )}
 
           {hasQuery && error && (
-            <p style={styles.error}>Error: {error.message}</p>
+            <Typography color="error.main">エラー: {error.message}</Typography>
           )}
 
           {hasQuery && !loading && !error && allIssues.length === 0 && (
-            <p style={styles.placeholder}>Issue が見つかりませんでした</p>
+            <Typography color="text.secondary">
+              Issue が見つかりませんでした
+            </Typography>
           )}
 
           {hasQuery && !loading && allIssues.length > 0 && (
             <>
               {isRevalidating && (
-                <span style={styles.revalidating}>更新中...</span>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ position: "absolute", top: 8, right: 8, zIndex: 10 }}
+                >
+                  更新中...
+                </Typography>
               )}
               <IssueGraph
                 issues={allIssues}
@@ -450,17 +469,21 @@ export function IssueDashboard() {
           )}
 
           {hasQuery && !loading && mutationError && (
-            <p style={styles.error}>{mutationError}</p>
+            <Typography color="error.main">{mutationError}</Typography>
           )}
 
-          <div style={styles.saveStatus}>
-            {isFlushing ? (
-              <span>保存中...</span>
-            ) : lastSavedAt ? (
-              <span>最終保存: {lastSavedAt.toLocaleTimeString()}</span>
-            ) : null}
-          </div>
-        </div>
+          {(isFlushing || lastSavedAt) && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ position: "absolute", bottom: 8, left: 12, zIndex: 10 }}
+            >
+              {isFlushing
+                ? "保存中..."
+                : `最終保存: ${lastSavedAt?.toLocaleTimeString()}`}
+            </Typography>
+          )}
+        </Box>
 
         {panelMode === "create-issue" && (
           <IssueCreateForm
@@ -501,51 +524,7 @@ export function IssueDashboard() {
             projectFields={projectFields}
           />
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  root: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-  },
-  main: {
-    display: "flex",
-    flex: 1,
-    minHeight: 0,
-  },
-  graphArea: {
-    flex: 1,
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  revalidating: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    zIndex: 10,
-    color: "#656d76",
-    fontSize: 12,
-  },
-  placeholder: {
-    color: "#656d76",
-    fontSize: 14,
-  },
-  error: {
-    color: "#cf222e",
-    fontSize: 14,
-  },
-  saveStatus: {
-    position: "absolute",
-    bottom: 8,
-    left: 12,
-    zIndex: 10,
-    color: "#656d76",
-    fontSize: 12,
-  },
-};

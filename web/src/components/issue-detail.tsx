@@ -7,16 +7,17 @@ import {
   IconButton,
   Link,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
-import { type SubmitEvent, useCallback, useState } from "react";
+import { alpha } from "@mui/material/styles";
+import { useCallback, useState } from "react";
 import { useIssueCreation } from "../hooks/use-issue-creation";
 import { useProjectMutations } from "../hooks/use-project-mutations";
 import { useResizablePanel } from "../hooks/use-resizable-panel";
-import type { Issue } from "../types/issue";
+import type { Issue, SearchResult } from "../types/issue";
 import type { ProjectField } from "../types/project";
 import { IssueFormFields } from "./issue-form-fields";
+import { ItemSearchAutocomplete } from "./item-search-autocomplete";
 
 export interface IssueDetailProps {
   issue: Issue | null;
@@ -49,8 +50,6 @@ export function IssueDetail({
   projectId,
   projectFields,
 }: IssueDetailProps) {
-  const [childNumber, setChildNumber] = useState("");
-  const [blockerNumber, setBlockerNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -75,57 +74,53 @@ export function IssueDetail({
   const { updateFieldValue } = useProjectMutations();
 
   const handleAddSubIssue = useCallback(
-    async (e: SubmitEvent) => {
-      e.preventDefault();
-      if (!issue || !onAddSubIssue || !childNumber.trim()) return;
-
-      const num = Number.parseInt(childNumber.trim(), 10);
-      if (Number.isNaN(num) || num <= 0) {
-        // TODO: エラーメッセージを日本語に統一する (他コンポーネントは日本語)
-        setFormError("Invalid issue number");
-        return;
-      }
-
+    async (result: SearchResult) => {
+      if (!issue || !onAddSubIssue) return;
       setSubmitting(true);
       setFormError(null);
       try {
-        await onAddSubIssue(issue.owner, issue.repo, issue.number, num);
-        setChildNumber("");
+        await onAddSubIssue(
+          issue.owner,
+          issue.repo,
+          issue.number,
+          result.number,
+        );
       } catch (err) {
-        // TODO: エラーメッセージを日本語に統一する (他コンポーネントは日本語)
-        setFormError(err instanceof Error ? err.message : "Failed to add");
+        setFormError(
+          err instanceof Error
+            ? err.message
+            : "サブイシューの追加に失敗しました",
+        );
       } finally {
         setSubmitting(false);
       }
     },
-    [issue, onAddSubIssue, childNumber],
+    [issue, onAddSubIssue],
   );
 
   const handleAddBlockedBy = useCallback(
-    async (e: SubmitEvent) => {
-      e.preventDefault();
-      if (!issue || !onAddBlockedBy || !blockerNumber.trim()) return;
-
-      const num = Number.parseInt(blockerNumber.trim(), 10);
-      if (Number.isNaN(num) || num <= 0) {
-        // TODO: エラーメッセージを日本語に統一する (他コンポーネントは日本語)
-        setFormError("Invalid issue number");
-        return;
-      }
-
+    async (result: SearchResult) => {
+      if (!issue || !onAddBlockedBy) return;
       setSubmitting(true);
       setFormError(null);
       try {
-        await onAddBlockedBy(issue.owner, issue.repo, issue.number, num);
-        setBlockerNumber("");
+        await onAddBlockedBy(
+          issue.owner,
+          issue.repo,
+          issue.number,
+          result.number,
+        );
       } catch (err) {
-        // TODO: エラーメッセージを日本語に統一する (他コンポーネントは日本語)
-        setFormError(err instanceof Error ? err.message : "Failed to add");
+        setFormError(
+          err instanceof Error
+            ? err.message
+            : "Blocked By の追加に失敗しました",
+        );
       } finally {
         setSubmitting(false);
       }
     },
-    [issue, onAddBlockedBy, blockerNumber],
+    [issue, onAddBlockedBy],
   );
 
   const handleEditStart = useCallback(async () => {
@@ -243,19 +238,19 @@ export function IssueDetail({
         position: "relative",
         width,
         p: 2,
-        borderLeft: "1px solid #d0d7de",
-        bgcolor: "#fff",
+        borderLeft: "1px solid",
+        borderColor: "divider",
+        bgcolor: "background.paper",
         overflowY: "auto",
         display: "flex",
         flexDirection: "column",
         gap: 1.5,
-        fontSize: 13,
         flexShrink: 0,
       }}
     >
       <Box
         onMouseDown={handleMouseDown}
-        sx={{
+        sx={(theme) => ({
           position: "absolute",
           left: 0,
           top: 0,
@@ -263,19 +258,24 @@ export function IssueDetail({
           width: 4,
           cursor: "col-resize",
           zIndex: 1,
-          "&:hover": { bgcolor: "#0969da4d" },
-        }}
+          "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.3) },
+        })}
       />
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Chip
           label={issue.state}
           size="small"
-          sx={{
-            bgcolor: issue.state === "open" ? "#dafbe1" : "#f0e6ff",
-            color: issue.state === "open" ? "#1a7f37" : "#8250df",
+          sx={(theme) => ({
+            bgcolor:
+              issue.state === "open"
+                ? theme.palette.issueState.openBg
+                : theme.palette.issueState.closedBg,
+            color:
+              issue.state === "open"
+                ? theme.palette.issueState.openColor
+                : theme.palette.issueState.closedColor,
             fontWeight: 600,
-            fontSize: 12,
-          }}
+          })}
         />
         <Stack direction="row" alignItems="center" gap={0.5}>
           {onUpdate && !editing && !confirmingDelete && (
@@ -283,7 +283,7 @@ export function IssueDetail({
               size="small"
               variant="outlined"
               onClick={handleEditStart}
-              sx={{ fontSize: 12, textTransform: "none", py: 0.25, px: 1 }}
+              sx={{ py: 0.25, px: 1 }}
             >
               編集
             </Button>
@@ -294,12 +294,16 @@ export function IssueDetail({
               variant="outlined"
               color="error"
               onClick={() => setConfirmingDelete(true)}
-              sx={{ fontSize: 12, textTransform: "none", py: 0.25, px: 1 }}
+              sx={{ py: 0.25, px: 1 }}
             >
               削除
             </Button>
           )}
-          <IconButton size="small" onClick={onClose} sx={{ color: "#656d76" }}>
+          <IconButton
+            size="small"
+            onClick={onClose}
+            sx={{ color: "text.secondary" }}
+          >
             ×
           </IconButton>
         </Stack>
@@ -313,11 +317,12 @@ export function IssueDetail({
           sx={{
             p: 1,
             borderRadius: 1,
-            bgcolor: "#fff8f0",
-            border: "1px solid #f97316",
+            bgcolor: "warning.light",
+            border: "1px solid",
+            borderColor: "warning.main",
           }}
         >
-          <Typography sx={{ fontSize: 12, color: "#9a3412", flex: 1 }}>
+          <Typography variant="body2" sx={{ color: "warning.dark", flex: 1 }}>
             本当に削除しますか？この操作は取り消せません。
           </Typography>
           <Button
@@ -326,7 +331,7 @@ export function IssueDetail({
             color="error"
             onClick={handleDeleteConfirm}
             disabled={deleting}
-            sx={{ fontSize: 12, textTransform: "none", flexShrink: 0 }}
+            sx={{ flexShrink: 0 }}
           >
             {deleting ? "削除中..." : "削除"}
           </Button>
@@ -338,18 +343,14 @@ export function IssueDetail({
               setDeleteError(null);
             }}
             disabled={deleting}
-            sx={{ fontSize: 12, textTransform: "none", flexShrink: 0 }}
+            sx={{ flexShrink: 0 }}
           >
             キャンセル
           </Button>
         </Stack>
       )}
 
-      {deleteError && (
-        <Alert severity="error" sx={{ py: 0.5, fontSize: 12 }}>
-          {deleteError}
-        </Alert>
-      )}
+      {deleteError && <Alert severity="error">{deleteError}</Alert>}
 
       <Chip
         label={`${issue.owner}/${issue.repo}`}
@@ -357,9 +358,8 @@ export function IssueDetail({
         size="small"
         sx={{
           alignSelf: "flex-start",
-          fontSize: 11,
-          color: "#656d76",
-          bgcolor: "#f6f8fa",
+          color: "text.secondary",
+          bgcolor: "grey.50",
           fontFamily: "monospace",
           borderColor: "transparent",
         }}
@@ -373,18 +373,9 @@ export function IssueDetail({
             display: "flex",
             flexDirection: "column",
             gap: 1.5,
-            "& .MuiOutlinedInput-root.Mui-disabled": { bgcolor: "#f6f8fa" },
-            "& .MuiInputBase-input.Mui-disabled": {
-              WebkitTextFillColor: "#8c959f",
-            },
-            "& .MuiFormLabel-root.Mui-disabled": { color: "#8c959f" },
           }}
         >
-          {editError && (
-            <Alert severity="error" sx={{ py: 0.5, fontSize: 12 }}>
-              {editError}
-            </Alert>
-          )}
+          {editError && <Alert severity="error">{editError}</Alert>}
           <IssueFormFields
             collaborators={editCollaborators}
             projectFields={projectFields ?? []}
@@ -400,24 +391,20 @@ export function IssueDetail({
             state={editState}
             onStateChange={setEditState}
           />
-          <Stack direction="row" gap={1}>
+          <Stack direction="row-reverse" gap={1}>
             <Button
               type="submit"
               variant="contained"
               color="success"
-              size="small"
               disabled={editSubmitting || !editTitle.trim()}
-              sx={{ textTransform: "none", fontSize: 13, flex: 1 }}
             >
               {editSubmitting ? "保存中..." : "保存"}
             </Button>
             <Button
               type="button"
-              variant="outlined"
-              size="small"
+              variant="text"
               onClick={handleEditCancel}
               disabled={editSubmitting}
-              sx={{ textTransform: "none", fontSize: 13 }}
             >
               キャンセル
             </Button>
@@ -425,18 +412,14 @@ export function IssueDetail({
         </Box>
       ) : (
         <>
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 600,
-              fontSize: 15,
-              color: "#24292f",
-              lineHeight: 1.4,
-            }}
-          >
+          <Typography variant="subtitle1" sx={{ color: "text.primary" }}>
             <Typography
               component="span"
-              sx={{ color: "#656d76", fontWeight: 400, fontSize: "inherit" }}
+              sx={{
+                color: "text.secondary",
+                fontWeight: 400,
+                fontSize: "inherit",
+              }}
             >
               #{issue.number}
             </Typography>{" "}
@@ -457,7 +440,7 @@ export function IssueDetail({
                     alt={a.login}
                     sx={{ width: 20, height: 20 }}
                   />
-                  <Typography sx={{ fontSize: 12, color: "#24292f" }}>
+                  <Typography variant="body2" sx={{ color: "text.primary" }}>
                     {a.login}
                   </Typography>
                 </Stack>
@@ -474,8 +457,7 @@ export function IssueDetail({
                   size="small"
                   sx={{
                     bgcolor: `#${label.color}`,
-                    color: isLightColor(label.color) ? "#24292f" : "#fff",
-                    fontSize: 11,
+                    color: isLightColor(label.color) ? "text.primary" : "#fff",
                     fontWeight: 500,
                     height: "auto",
                     "& .MuiChip-label": { px: 1, py: 0.25 },
@@ -487,9 +469,9 @@ export function IssueDetail({
 
           {issue.body && (
             <Typography
+              variant="body2"
               sx={{
-                fontSize: 12,
-                color: "#656d76",
+                color: "text.secondary",
                 lineHeight: 1.5,
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
@@ -505,115 +487,57 @@ export function IssueDetail({
 
       {onAddSubIssue && (
         <Box
-          component="form"
-          onSubmit={handleAddSubIssue}
           sx={{
-            borderTop: "1px solid #d0d7de",
+            borderTop: "1px solid",
+            borderColor: "divider",
             pt: 1.5,
             display: "flex",
             flexDirection: "column",
             gap: 0.75,
           }}
         >
-          <Box
-            component="label"
-            htmlFor="sub-issue-input"
-            sx={{ fontSize: 12, fontWeight: 600, color: "#24292f" }}
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 600, color: "text.primary" }}
           >
             Add Sub-Issue
-          </Box>
-          <Stack direction="row" gap={0.5}>
-            <TextField
-              id="sub-issue-input"
-              size="small"
-              placeholder="Issue #"
-              value={childNumber}
-              onChange={(e) => setChildNumber(e.target.value)}
-              disabled={submitting}
-              sx={{
-                flex: 1,
-                "& .MuiInputBase-input": { fontSize: 12, py: 0.5, px: 1 },
-              }}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              color="success"
-              size="small"
-              disabled={submitting || !childNumber.trim()}
-              sx={{
-                fontSize: 12,
-                minWidth: "auto",
-                px: 1.25,
-                py: 0.5,
-                textTransform: "none",
-              }}
-            >
-              {submitting ? "..." : "Add"}
-            </Button>
-          </Stack>
-          {formError && (
-            <Alert severity="error" sx={{ py: 0, fontSize: 11 }}>
-              {formError}
-            </Alert>
-          )}
+          </Typography>
+          <ItemSearchAutocomplete
+            owner={issue.owner}
+            type="issue"
+            onSelect={handleAddSubIssue}
+            disabled={submitting}
+            label="Sub-Issue を検索"
+          />
+          {formError && <Alert severity="error">{formError}</Alert>}
         </Box>
       )}
 
       {onAddBlockedBy && (
         <Box
-          component="form"
-          onSubmit={handleAddBlockedBy}
           sx={{
-            borderTop: "1px solid #d0d7de",
+            borderTop: "1px solid",
+            borderColor: "divider",
             pt: 1.5,
             display: "flex",
             flexDirection: "column",
             gap: 0.75,
           }}
         >
-          <Box
-            component="label"
-            htmlFor="blocked-by-input"
-            sx={{ fontSize: 12, fontWeight: 600, color: "#24292f" }}
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 600, color: "text.primary" }}
           >
             Add Blocked By
-          </Box>
-          <Stack direction="row" gap={0.5}>
-            <TextField
-              id="blocked-by-input"
-              size="small"
-              placeholder="Issue #"
-              value={blockerNumber}
-              onChange={(e) => setBlockerNumber(e.target.value)}
-              disabled={submitting}
-              sx={{
-                flex: 1,
-                "& .MuiInputBase-input": { fontSize: 12, py: 0.5, px: 1 },
-              }}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              color="error"
-              size="small"
-              disabled={submitting || !blockerNumber.trim()}
-              sx={{
-                fontSize: 12,
-                minWidth: "auto",
-                px: 1.25,
-                py: 0.5,
-                textTransform: "none",
-              }}
-            >
-              {submitting ? "..." : "Add"}
-            </Button>
-          </Stack>
-          {formError && (
-            <Alert severity="error" sx={{ py: 0, fontSize: 11 }}>
-              {formError}
-            </Alert>
-          )}
+          </Typography>
+          <ItemSearchAutocomplete
+            owner={issue.owner}
+            type="issue"
+            onSelect={handleAddBlockedBy}
+            disabled={submitting}
+            label="Blocked By を検索"
+          />
+          {formError && <Alert severity="error">{formError}</Alert>}
         </Box>
       )}
 
@@ -621,9 +545,24 @@ export function IssueDetail({
         href={issue.url}
         target="_blank"
         rel="noopener noreferrer"
-        sx={{ color: "#0969da", fontSize: 13, textDecoration: "none" }}
+        sx={{
+          textDecoration: "none",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.5,
+        }}
       >
-        View on GitHub
+        GitHub で表示
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+          fill="currentColor"
+        >
+          <title>新しいタブで開く</title>
+          <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z" />
+        </svg>
       </Link>
     </Box>
   );

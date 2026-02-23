@@ -75,32 +75,29 @@ export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
         flexDirection: "column",
         gap: 1,
         p: 1.5,
-        borderBottom: "1px solid #d0d7de",
-        fontSize: 13,
+        borderBottom: "1px solid",
+        borderColor: "divider",
       }}
     >
       <Stack direction="row" gap={1.5} flexWrap="wrap" alignItems="flex-end">
         <TextField
-          label="Owner"
-          size="small"
+          label="オーナー"
           value={filters.owner}
           placeholder="owner"
           onChange={(e) => update({ owner: e.target.value })}
-          sx={{ "& .MuiInputBase-input": { fontSize: 13 } }}
         />
         <TextField
           select
           label="State"
-          size="small"
           value={filters.state}
           onChange={(e) =>
             update({ state: e.target.value as FilterValues["state"] })
           }
-          sx={{ minWidth: 100, "& .MuiSelect-select": { fontSize: 13 } }}
+          sx={{ minWidth: 100 }}
         >
           <MenuItem value="open">Open</MenuItem>
           <MenuItem value="closed">Closed</MenuItem>
-          <MenuItem value="all">All</MenuItem>
+          <MenuItem value="all">すべて</MenuItem>
         </TextField>
       </Stack>
 
@@ -117,9 +114,10 @@ export function FilterPanel({ defaultValues, onChange }: FilterPanelProps) {
       <Stack direction="row" gap={1.5} flexWrap="wrap" alignItems="flex-end">
         {fieldsLoading && (
           <Typography
-            sx={{ fontSize: 12, color: "#656d76", alignSelf: "center" }}
+            variant="body2"
+            sx={{ color: "text.secondary", alignSelf: "center" }}
           >
-            Loading fields...
+            フィールドを読み込み中...
           </Typography>
         )}
         {fields.map((field) => (
@@ -153,13 +151,12 @@ function ProjectSelect({
       select
       label="Project"
       id="filter-project"
-      size="small"
       value={value}
       disabled={disabled || loading}
       onChange={(e) => onChange(e.target.value)}
-      sx={{ minWidth: 200, "& .MuiSelect-select": { fontSize: 13 } }}
+      sx={{ minWidth: 200 }}
     >
-      <MenuItem value="">{loading ? "Loading..." : "-- Select --"}</MenuItem>
+      <MenuItem value="">{loading ? "読み込み中..." : "-- 選択してください --"}</MenuItem>
       {projects.map((p) => (
         <MenuItem key={p.id} value={p.id}>
           #{p.number} {p.title}
@@ -184,12 +181,11 @@ function FieldFilter({
     <TextField
       select
       label={field.name}
-      size="small"
       value={value}
       onChange={(e) => onChange(field.id, e.target.value)}
-      sx={{ minWidth: 120, "& .MuiSelect-select": { fontSize: 13 } }}
+      sx={{ minWidth: 120 }}
     >
-      <MenuItem value="">All</MenuItem>
+      <MenuItem value="">すべて</MenuItem>
       {field.options.map((opt) => (
         <MenuItem key={opt.id} value={opt.id}>
           {opt.name}

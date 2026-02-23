@@ -1,4 +1,11 @@
-import { Divider, Menu, MenuItem } from "@mui/material";
+import {
+  Button,
+  Checkbox,
+  Divider,
+  ListItemText,
+  Menu,
+  MenuItem,
+} from "@mui/material";
 import {
   Background,
   type Connection,
@@ -40,15 +47,15 @@ interface ResolvedField {
 
 /** GitHub の SINGLE_SELECT オプション color enum → CSS カラー */
 const FIELD_OPTION_COLORS: Record<string, { bg: string; text: string }> = {
-  GRAY:   { bg: "#eaeef2", text: "#57606a" },
-  BLUE:   { bg: "#ddf4ff", text: "#0550ae" },
-  GREEN:  { bg: "#dafbe1", text: "#116329" },
+  GRAY: { bg: "#eaeef2", text: "#57606a" },
+  BLUE: { bg: "#ddf4ff", text: "#0550ae" },
+  GREEN: { bg: "#dafbe1", text: "#116329" },
   YELLOW: { bg: "#fff8c5", text: "#9a6700" },
   ORANGE: { bg: "#fff1e5", text: "#953800" },
-  RED:    { bg: "#ffebe9", text: "#cf222e" },
-  PINK:   { bg: "#ffeff7", text: "#bf3989" },
+  RED: { bg: "#ffebe9", text: "#cf222e" },
+  PINK: { bg: "#ffeff7", text: "#bf3989" },
   PURPLE: { bg: "#fbefff", text: "#8250df" },
-  CYAN:   { bg: "#e6f4f1", text: "#0d7a6b" },
+  CYAN: { bg: "#e6f4f1", text: "#0d7a6b" },
 };
 
 interface IssueNodeData {
@@ -58,7 +65,8 @@ interface IssueNodeData {
 }
 
 function IssueNode({ data, selected }: NodeProps) {
-  const { issue, isMultiRepo, resolvedFields } = data as unknown as IssueNodeData;
+  const { issue, isMultiRepo, resolvedFields } =
+    data as unknown as IssueNodeData;
   const isPR = issue.url.includes("/pull/");
   const isOpen = issue.state === "open";
   const stateColor = isOpen ? "#1a7f37" : "#8250df";
@@ -92,7 +100,9 @@ function IssueNode({ data, selected }: NodeProps) {
           gap: 4,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}
+        >
           <span
             style={{
               fontSize: 9,
@@ -132,7 +142,8 @@ function IssueNode({ data, selected }: NodeProps) {
           fontSize: 12,
           color: "#24292f",
           lineHeight: 1.35,
-          marginBottom: resolvedFields.length > 0 || issue.assignees.length > 0 ? 5 : 0,
+          marginBottom:
+            resolvedFields.length > 0 || issue.assignees.length > 0 ? 5 : 0,
           overflow: "hidden",
           display: "-webkit-box",
           WebkitLineClamp: 2,
@@ -152,9 +163,13 @@ function IssueNode({ data, selected }: NodeProps) {
             gap: 4,
           }}
         >
-          <div style={{ display: "flex", gap: 3, flexWrap: "wrap", minWidth: 0 }}>
+          <div
+            style={{ display: "flex", gap: 3, flexWrap: "wrap", minWidth: 0 }}
+          >
             {resolvedFields.map((f) => {
-              const fieldColor = f.color ? FIELD_OPTION_COLORS[f.color] : undefined;
+              const fieldColor = f.color
+                ? FIELD_OPTION_COLORS[f.color]
+                : undefined;
               return (
                 <span
                   key={f.name}
@@ -219,15 +234,17 @@ export function issuesToNodes(
   const isMultiRepo = repos.size > 1;
 
   return issues.map((issue) => {
-    const resolvedFields: ResolvedField[] = visibleFieldIds.flatMap((fieldId) => {
-      const field = projectFields.find((f) => f.id === fieldId);
-      if (!field) return [];
-      const optionId = issue.fieldValues?.[fieldId];
-      if (!optionId) return [];
-      const option = field.options.find((o) => o.id === optionId);
-      if (!option) return [];
-      return [{ name: field.name, value: option.name, color: option.color }];
-    });
+    const resolvedFields: ResolvedField[] = visibleFieldIds.flatMap(
+      (fieldId) => {
+        const field = projectFields.find((f) => f.id === fieldId);
+        if (!field) return [];
+        const optionId = issue.fieldValues?.[fieldId];
+        if (!optionId) return [];
+        const option = field.options.find((o) => o.id === optionId);
+        if (!option) return [];
+        return [{ name: field.name, value: option.name, color: option.color }];
+      },
+    );
 
     return {
       id: issue.id,
@@ -521,8 +538,9 @@ function IssueGraphReady({
     }
   });
 
-  const [fieldsMenuOpen, setFieldsMenuOpen] = useState(false);
-  const fieldsButtonRef = useRef<HTMLButtonElement>(null);
+  const [fieldsMenuAnchorEl, setFieldsMenuAnchorEl] =
+    useState<HTMLButtonElement | null>(null);
+  const fieldsMenuOpen = Boolean(fieldsMenuAnchorEl);
 
   const toggleFieldVisibility = useCallback((fieldId: string) => {
     setVisibleFieldIds((prev) => {
@@ -628,7 +646,14 @@ function IssueGraphReady({
     return () => {
       cancelled = true;
     };
-  }, [issues, pendingNodePositions, projectId, projectFields, visibleFieldIds, setNodes]);
+  }, [
+    issues,
+    pendingNodePositions,
+    projectId,
+    projectFields,
+    visibleFieldIds,
+    setNodes,
+  ]);
 
   // --- ペインコンテキストメニュー（空白領域の右クリック） ---
   const [paneContextMenu, setPaneContextMenu] =
@@ -791,34 +816,40 @@ function IssueGraphReady({
         </button>
 
         {selectableFields.length > 0 && (
-          <div style={{ position: "relative", marginLeft: 8 }}>
-            <button
-              ref={fieldsButtonRef}
-              type="button"
-              style={{
-                ...graphStyles.modeButton,
-                borderRadius: 4,
-                ...(fieldsMenuOpen ? graphStyles.modeButtonActiveSubIssue : {}),
-              }}
-              onClick={() => setFieldsMenuOpen((v) => !v)}
+          <div style={{ marginLeft: 8 }}>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={(e) => setFieldsMenuAnchorEl(e.currentTarget)}
+              sx={{ fontSize: 12, py: "3px" }}
             >
-              Fields {visibleFieldIds.length > 0 ? `(${visibleFieldIds.length})` : ""}
-            </button>
-            {fieldsMenuOpen && (
-              <div style={graphStyles.fieldsDropdown}>
-                {selectableFields.map((field) => (
-                  <label key={field.id} style={graphStyles.fieldsDropdownItem}>
-                    <input
-                      type="checkbox"
-                      checked={visibleFieldIds.includes(field.id)}
-                      onChange={() => toggleFieldVisibility(field.id)}
-                      style={{ marginRight: 6 }}
-                    />
-                    {field.name}
-                  </label>
-                ))}
-              </div>
-            )}
+              プロジェクトフィールドの表示
+              {visibleFieldIds.length > 0 ? ` (${visibleFieldIds.length})` : ""}
+            </Button>
+            <Menu
+              open={fieldsMenuOpen}
+              anchorEl={fieldsMenuAnchorEl}
+              onClose={() => setFieldsMenuAnchorEl(null)}
+              slotProps={{ list: { dense: true } }}
+            >
+              {selectableFields.map((field) => (
+                <MenuItem
+                  key={field.id}
+                  onClick={() => toggleFieldVisibility(field.id)}
+                  sx={{ fontSize: 12 }}
+                >
+                  <Checkbox
+                    checked={visibleFieldIds.includes(field.id)}
+                    size="small"
+                    sx={{ p: 0, mr: 1 }}
+                  />
+                  <ListItemText
+                    primary={field.name}
+                    slotProps={{ primary: { fontSize: 12 } }}
+                  />
+                </MenuItem>
+              ))}
+            </Menu>
           </div>
         )}
       </div>
@@ -933,26 +964,5 @@ const graphStyles: Record<string, React.CSSProperties> = {
     background: "#cf222e",
     color: "#fff",
     borderColor: "#cf222e",
-  },
-  fieldsDropdown: {
-    position: "absolute",
-    top: "calc(100% + 4px)",
-    left: 0,
-    zIndex: 20,
-    background: "#fff",
-    border: "1px solid #d0d7de",
-    borderRadius: 6,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-    minWidth: 160,
-    padding: "4px 0",
-  },
-  fieldsDropdownItem: {
-    display: "flex",
-    alignItems: "center",
-    padding: "5px 12px",
-    fontSize: 12,
-    color: "#24292f",
-    cursor: "pointer",
-    whiteSpace: "nowrap" as const,
   },
 };

@@ -49,7 +49,11 @@ const extractOptions = (
   node: GitHubProjectV2FieldNode,
 ): ProjectFieldOption[] => {
   if (node.dataType === "SINGLE_SELECT" && node.options) {
-    return node.options.map((o) => ({ id: o.id, name: o.name, color: o.color ?? undefined }));
+    return node.options.map((o) => ({
+      id: o.id,
+      name: o.name,
+      color: o.color ?? undefined,
+    }));
   }
   if (node.dataType === "ITERATION" && node.configuration?.iterations) {
     return node.configuration.iterations.map((i) => ({

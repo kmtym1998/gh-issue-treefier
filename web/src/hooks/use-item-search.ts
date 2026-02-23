@@ -41,7 +41,7 @@ export const useItemSearch = (): UseItemSearchResult => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (abortRef.current) abortRef.current.abort();
 
-      if (!query.trim()) {
+      if (!owner) {
         setResults([]);
         setLoading(false);
         return;
@@ -55,11 +55,13 @@ export const useItemSearch = (): UseItemSearchResult => {
 
         try {
           const typeFilter = type === "pr" ? "pr" : "issue";
+          const baseQ = `user:${owner} type:${typeFilter}`;
           const q = encodeURIComponent(
-            `${query} user:${owner} type:${typeFilter}`,
+            query.trim() ? `${query} ${baseQ}` : baseQ,
           );
+          const sortParam = query.trim() ? "" : "&sort=updated&order=desc";
           const data = await restGet<GitHubSearchResponse>(
-            `search/issues?q=${q}`,
+            `search/issues?q=${q}${sortParam}`,
           );
 
           if (controller.signal.aborted) return;

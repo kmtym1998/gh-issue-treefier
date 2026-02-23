@@ -18,7 +18,9 @@ export const useOptimisticIssues = (
   serverIssues: Issue[],
 ): UseOptimisticIssuesResult => {
   const [optimisticIssues, setOptimisticIssues] = useState<Issue[]>([]);
-  const [optimisticUpdates, setOptimisticUpdates] = useState<Record<string, Issue>>({});
+  const [optimisticUpdates, setOptimisticUpdates] = useState<
+    Record<string, Issue>
+  >({});
   const prevServerRef = useRef(serverIssues);
 
   // サーバーデータに含まれるようになった楽観的 Issue をクリア

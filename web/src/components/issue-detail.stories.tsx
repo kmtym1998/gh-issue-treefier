@@ -1,6 +1,33 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { HttpResponse, http } from "msw";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { IssueDetail } from "./issue-detail";
+
+const mockSearchResults = {
+  total_count: 2,
+  items: [
+    {
+      number: 10,
+      title: "Fix login bug",
+      state: "open",
+      node_id: "I_10",
+      repository_url: "https://api.github.com/repos/owner/repo",
+    },
+    {
+      number: 11,
+      title: "Update documentation",
+      state: "closed",
+      node_id: "I_11",
+      repository_url: "https://api.github.com/repos/owner/repo",
+    },
+  ],
+};
+
+const searchHandlers = [
+  http.get("/api/github/rest/search/issues", () =>
+    HttpResponse.json(mockSearchResults),
+  ),
+];
 
 const meta = {
   title: "Components/IssueDetail",
@@ -144,31 +171,26 @@ export const WithAddSubIssueForm: Story = {
     },
     onAddSubIssue: fn(() => Promise.resolve()),
   },
+  parameters: {
+    msw: { handlers: searchHandlers },
+  },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
 
     // Form should be visible
     expect(canvas.getByText("Add Sub-Issue")).toBeDefined();
 
-    // Submit button should be disabled when input is empty
-    const submitButton = canvas.getByText("Add");
-    expect(submitButton).toBeDisabled();
+    // Open the autocomplete dropdown
+    const input = canvas.getByRole("combobox", { name: "Sub-Issue を検索" });
+    await userEvent.click(input);
 
-    // Type an issue number
-    const input = canvas.getByPlaceholderText("Issue #");
-    await userEvent.type(input, "10");
+    // Options are rendered in a portal outside canvasElement
+    const body = within(document.body);
+    const option = await body.findByText("Fix login bug");
+    await userEvent.click(option);
 
-    // Submit button should now be enabled
-    expect(submitButton).not.toBeDisabled();
-
-    // Submit the form
-    await userEvent.click(submitButton);
-
-    // Callback should have been called
+    // Callback should have been called with the selected issue's number
     expect(args.onAddSubIssue).toHaveBeenCalledWith("owner", "repo", 42, 10);
-
-    // Input should be cleared after successful submission
-    expect(input).toHaveValue("");
   },
 };
 

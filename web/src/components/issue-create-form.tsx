@@ -14,6 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useIssueCreation } from "../hooks/use-issue-creation";
 import { buildIssueId } from "../hooks/use-project-issues";
@@ -213,24 +214,20 @@ export function IssueCreateForm({
         position: "relative",
         width,
         p: 2,
-        borderLeft: "1px solid #d0d7de",
-        bgcolor: "#fff",
+        borderLeft: "1px solid",
+        borderColor: "divider",
+        bgcolor: "background.paper",
         overflowY: "auto",
         display: "flex",
         flexDirection: "column",
         gap: 1.5,
         fontSize: 13,
         flexShrink: 0,
-        "& .MuiOutlinedInput-root.Mui-disabled": { bgcolor: "#f6f8fa" },
-        "& .MuiInputBase-input.Mui-disabled": {
-          WebkitTextFillColor: "#8c959f",
-        },
-        "& .MuiFormLabel-root.Mui-disabled": { color: "#8c959f" },
       }}
     >
       <Box
         onMouseDown={handleMouseDown}
-        sx={{
+        sx={(theme) => ({
           position: "absolute",
           left: 0,
           top: 0,
@@ -238,23 +235,23 @@ export function IssueCreateForm({
           width: 4,
           cursor: "col-resize",
           zIndex: 1,
-          "&:hover": { bgcolor: "#0969da4d" },
-        }}
+          "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.3) },
+        })}
       />
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography sx={{ fontWeight: 600, fontSize: 14, color: "#24292f" }}>
+        <Typography variant="subtitle2" sx={{ color: "text.primary" }}>
           Issue を作成
         </Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#656d76" }}>
+        <IconButton
+          size="small"
+          onClick={onClose}
+          sx={{ color: "text.secondary" }}
+        >
           ×
         </IconButton>
       </Stack>
 
-      {error && (
-        <Alert severity="error" sx={{ py: 0.5, fontSize: 12 }}>
-          {error}
-        </Alert>
-      )}
+      {error && <Alert severity="error">{error}</Alert>}
 
       <Autocomplete
         freeSolo
@@ -264,7 +261,6 @@ export function IssueCreateForm({
         onChange={(_, value) =>
           handleRepoSelect(typeof value === "string" ? value : null)
         }
-        size="small"
         renderInput={(params) => (
           <TextField
             {...params}
@@ -277,7 +273,7 @@ export function IssueCreateForm({
       />
 
       {templates.length > 0 && (
-        <FormControl size="small">
+        <FormControl>
           <InputLabel>テンプレート</InputLabel>
           <Select
             label="テンプレート"
@@ -320,7 +316,7 @@ export function IssueCreateForm({
             disabled={submitting || !isRepoValid}
           />
         }
-        label={<Typography sx={{ fontSize: 13 }}>続けて作成する</Typography>}
+        label={<Typography>続けて作成する</Typography>}
         sx={{ m: 0 }}
       />
 
@@ -328,9 +324,7 @@ export function IssueCreateForm({
         type="submit"
         variant="contained"
         color="success"
-        size="small"
         disabled={submitting || !title.trim() || !isRepoValid}
-        sx={{ textTransform: "none", fontSize: 13 }}
       >
         {submitting ? "作成中..." : "Issue を作成"}
       </Button>

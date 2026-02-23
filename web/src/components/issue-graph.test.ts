@@ -63,7 +63,9 @@ describe("issuesToNodes", () => {
     expect(nodes[0].id).toBe("owner/repo#1");
     expect(nodes[0].type).toBe("issue");
     expect((nodes[0].data as { issue: Issue }).issue.number).toBe(1);
-    expect((nodes[0].data as { issue: Issue }).issue.title).toBe("Parent issue");
+    expect((nodes[0].data as { issue: Issue }).issue.title).toBe(
+      "Parent issue",
+    );
     expect(nodes[1].id).toBe("owner/repo#2");
     expect(nodes[1].type).toBe("issue");
     expect(nodes[2].id).toBe("owner/repo#3");

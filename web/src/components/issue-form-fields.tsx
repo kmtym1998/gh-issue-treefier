@@ -50,14 +50,12 @@ export function IssueFormFields({
   return (
     <>
       {state !== undefined && onStateChange && (
-        <FormControl size="small">
+        <FormControl>
           <InputLabel>State</InputLabel>
           <Select
             label="State"
             value={state}
-            onChange={(e) =>
-              onStateChange(e.target.value as "open" | "closed")
-            }
+            onChange={(e) => onStateChange(e.target.value as "open" | "closed")}
             disabled={disabled}
           >
             <MenuItem value="open">Open</MenuItem>
@@ -67,7 +65,6 @@ export function IssueFormFields({
       )}
 
       <TextField
-        size="small"
         label="タイトル"
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}
@@ -76,7 +73,6 @@ export function IssueFormFields({
       />
 
       <TextField
-        size="small"
         label="本文"
         value={body}
         onChange={(e) => onBodyChange(e.target.value)}
@@ -92,8 +88,7 @@ export function IssueFormFields({
         options={collaborators.map((c) => c.login)}
         value={assignees}
         onChange={(_, value) => onAssigneesChange(value)}
-        size="small"
-        renderInput={(params) => <TextField {...params} label="Assignees" />}
+        renderInput={(params) => <TextField {...params} label="担当者" />}
         renderOption={(props, option) => {
           const collaborator = collaborators.find((c) => c.login === option);
           return (
@@ -126,7 +121,7 @@ export function IssueFormFields({
       />
 
       {selectableFields.map((field) => (
-        <FormControl key={field.id} size="small">
+        <FormControl key={field.id}>
           <InputLabel>{field.name}</InputLabel>
           <Select
             label={field.name}
