@@ -12,8 +12,32 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: cli/gh-extension-precompile@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          generate_attestations: true
+          node-version-file: web/package.json
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Build web frontend
+        run: npm run build
+        working-directory: web
+
+      - name: Clean embedded dist
+        run: rm -rf internal/server/dist
+
+      - name: Copy web dist for embedding
+        run: cp -r web/dist internal/server/dist
+
+      - name: Build and release Go binaries
+        uses: cli/gh-extension-precompile@v2
+        with:
           go_version_file: go.mod
+          generate_attestations: true
