@@ -40,4 +40,5 @@ jobs:
         uses: cli/gh-extension-precompile@v2
         with:
           go_version_file: go.mod
+          go_build_options: ./cmd/gh-issue-treefier
           generate_attestations: true
