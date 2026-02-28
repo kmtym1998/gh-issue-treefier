@@ -2,6 +2,8 @@
 
 GitHub issue の依存関係（blocking/blocked by および sub-issue）を **DAG（有向非巡回グラフ）** として可視化・編集する GitHub CLI 拡張機能。
 
+<img width="1803" height="1452" alt="image" src="https://github.com/user-attachments/assets/b60f8ed6-0bfe-4135-99c4-81ba1d691029" />
+
 ## 機能
 
 - Sub-issue / blocked-by の依存関係を DAG としてインタラクティブに可視化
