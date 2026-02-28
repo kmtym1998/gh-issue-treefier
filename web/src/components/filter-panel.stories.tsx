@@ -96,7 +96,7 @@ export const TypeOwner: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
 
-    const ownerInput = canvas.getByLabelText("Owner");
+    const ownerInput = canvas.getByLabelText("オーナー");
     await userEvent.type(ownerInput, "octocat");
 
     expect(args.onChange).toHaveBeenCalled();

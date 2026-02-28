@@ -21,11 +21,23 @@ const jsonResponse = (body: unknown, status = 200, statusText = "OK") =>
   });
 
 describe("useItemSearch", () => {
-  it("clears results and does not fetch for empty query", () => {
+  it("debounces browse search for empty query with valid owner", () => {
     const { result } = renderHook(() => useItemSearch());
 
     act(() => {
       result.current.search("", "owner", "issue");
+    });
+
+    expect(result.current.results).toEqual([]);
+    expect(result.current.loading).toBe(true);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("clears results and does not fetch for empty owner", () => {
+    const { result } = renderHook(() => useItemSearch());
+
+    act(() => {
+      result.current.search("query", "", "issue");
     });
 
     expect(result.current.results).toEqual([]);

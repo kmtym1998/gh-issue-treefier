@@ -280,7 +280,7 @@ export const Initial: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     expect(
-      canvas.getByText("Owner を入力し Project を選択して Issue を表示"),
+      canvas.getByText("オーナーを入力し Project を選択して Issue を表示"),
     ).toBeDefined();
   },
 };
@@ -290,7 +290,7 @@ export const WithIssues: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
+    await userEvent.type(canvas.getByLabelText("オーナー"), "octocat");
 
     // Wait for projects to load (Project select becomes enabled)
     await waitFor(
@@ -327,7 +327,7 @@ export const EmptyResult: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
+    await userEvent.type(canvas.getByLabelText("オーナー"), "octocat");
 
     await waitFor(
       () => {
@@ -361,7 +361,7 @@ export const ErrorState: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await userEvent.type(canvas.getByLabelText("Owner"), "octocat");
+    await userEvent.type(canvas.getByLabelText("オーナー"), "octocat");
 
     await waitFor(
       () => {
@@ -380,7 +380,7 @@ export const ErrorState: Story = {
     await userEvent.click(listbox.getByText("#1 Sprint Board"));
 
     await expect(
-      await canvas.findByText(/Error:/, undefined, { timeout: 3000 }),
+      await canvas.findByText(/エラー:/, undefined, { timeout: 3000 }),
     ).toBeDefined();
   },
 };
