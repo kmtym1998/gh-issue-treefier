@@ -156,7 +156,9 @@ const ProjectSelect = ({
       onChange={(e) => onChange(e.target.value)}
       sx={{ minWidth: 200 }}
     >
-      <MenuItem value="">{loading ? "読み込み中..." : "-- 選択してください --"}</MenuItem>
+      <MenuItem value="">
+        {loading ? "読み込み中..." : "-- 選択してください --"}
+      </MenuItem>
       {projects.map((p) => (
         <MenuItem key={p.id} value={p.id}>
           #{p.number} {p.title}

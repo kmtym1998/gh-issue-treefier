@@ -289,7 +289,10 @@ export const dependenciesToEdges = (dependencies: Dependency[]): Edge[] => {
  * 指定ノードから outgoing エッジを辿り、子孫ノードの ID を全て返す（再帰）。
  * sub_issue と blocked_by の両方のエッジを辿る。
  */
-export const getDescendantIds = (nodeId: string, edges: Edge[]): Set<string> => {
+export const getDescendantIds = (
+  nodeId: string,
+  edges: Edge[],
+): Set<string> => {
   const result = new Set<string>();
   const queue = [nodeId];
   while (queue.length > 0) {
